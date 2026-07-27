@@ -44,6 +44,33 @@ main.py 的 _load_env() 是唯一做"多源合并"的地方：先读 .env 文件
 
 代价是配置优先级不透明。用户无法通过一个命令看到"当前生效的完整配置及其来源"。如果 settings.json 中的 mcpServers 和 .mcp.json 中有同名服务器，两者都会被加载（不做去重），可能导致重复注册。CLAUDE.md 的搜索逻辑（从 cwd 向上遍历到根目录，每级检查 .claude/CLAUDE.md）在嵌套项目中可能产生意外的指令叠加。
 
+下面以一次冷启动为例，trace 各路配置从加载到生效的完整顺序，看清"分散加载"具体分散在哪些环节：
+
+```mermaid
+sequenceDiagram
+    participant M as 启动入口
+    participant ENV as 环境/.env 加载
+    participant CL as 客户端工厂
+    participant SYS as system prompt 构建
+    participant CFG as MCP/Hook 配置
+    participant ENG as QueryEngine
+
+    M->>ENV: 读 .env（低优先级）再用环境变量覆盖
+    ENV-->>M: API key / base_url / 协调器开关
+    alt 缺 API key
+        M-->>M: 报错退出
+    end
+    M->>CL: 用 key + base_url 创建模型客户端
+    M->>SYS: 向上逐级搜索 CLAUDE.md，递归展开 @include
+    SYS-->>M: 拼装好的 system prompt（含记忆索引与用户指令）
+    M->>CFG: 从用户级 settings.json + 项目级 .mcp.json 读扩展配置
+    CFG-->>M: hooks 列表 + MCP 服务器列表
+    M->>ENG: 把客户端、prompt、工具、权限模式装配成引擎
+    Note over ENG: 配置至此全部生效，进入对话循环
+```
+
+这条链路暴露了"分散加载"的本质：没有一个中心配置对象，每类配置由各自的消费方在启动装配阶段独立读取——客户端只关心 key，prompt 构建只关心 CLAUDE.md，扩展装配只关心 settings/.mcp.json。好处是新增一类配置不牵动中心 schema，坏处是没有任何一处能回答"当前完整生效配置是什么、来自哪"。优先级只在环境合并那一步显式存在（环境变量压过 .env），其余各路配置之间是并列而非覆盖关系。
+
 ### 设计选择 2：CLAUDE.md 的层级发现 + @include
 
 CLAUDE.md 是 claudecode 的“项目指令文件”，类似 .editorconfig 或 .eslintrc 的层级配置模式。load_claude_md() 从 cwd 向上遍历到文件系统根目录，在每一级检查 .claude/CLAUDE.md 是否存在，将所有找到的文件内容合并（越靠近 cwd 的优先级越高）。支持 @include 指令递归展开引用的其他文件。

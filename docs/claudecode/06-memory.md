@@ -53,10 +53,10 @@ sequenceDiagram
     participant LLM as call_model (低配)
     participant FS as 文件系统
 
-    REPL->>EC: request_extraction(messages, cwd, call_model)
-    Note over EC: _running=false → 进入临界区
-    EC->>EC: _running=true, _dirty=false
-    EC->>EC: current_visible=12, last_extracted=4, increment=8 ≥ MIN(4)
+    REPL->>EC: 请求提取(messages, cwd, call_model)
+    Note over EC: 当前空闲 → 进入临界区
+    EC->>EC: 置为提取中，清脏标记
+    EC->>EC: 可见消息 12 条、上次提取到第 4 条，增量 8 ≥ 最小阈值(4)
 
     EC->>EX: extract_memories(messages, cwd, call_model, new_message_count=8)
     EX->>SM: load_memories(cwd)
@@ -64,29 +64,29 @@ sequenceDiagram
     FS-->>SM: [{name: "user_prefs", content: "..."}]
     SM-->>EX: existing memories
 
-    EX->>EX: _format_messages_for_extraction(最近8条)
+    EX->>EX: 格式化最近 8 条消息
     Note over EX: tool_result 折叠为 "[tool results]"
     EX->>EX: 组装 user_prompt (existing + recent)
 
-    EX->>LLM: call_model(messages=[user_prompt], system=EXTRACTION_SYSTEM_PROMPT, tools=None)
-    LLM-->>EX: TextDelta: '{"memories": [{"name": "pytest_pref", "type": "feedback", "content": "---\\nname: pytest_pref\\ndescription: 用户偏好 pytest\\ntype: feedback\\n---\\n..."}]}'
+    EX->>LLM: call_model(messages=[user_prompt], system=提取提示词, tools=None)
+    LLM-->>EX: 返回 JSON：{"memories": [{"name": "pytest_pref", "type": "feedback", ...}]}
 
-    EX->>EX: json.loads(response) → memories 列表
+    EX->>EX: 解析 JSON → memories 列表
     EX->>SM: save_memory(cwd, "pytest_pref", content)
     SM->>FS: mkdir + 写 ~/.claude/projects/{hash}/memory/pytest_pref.md
     EX->>SM: update_memory_index(cwd, "pytest_pref", "用户偏好 pytest")
     SM->>FS: 读 MEMORY.md → 追加索引行 → 写回
 
     EX-->>EC: ["pytest_pref"]
-    EC->>EC: _last_extracted_count = 12
-    EC->>EC: _dirty == false → 退出循环
-    EC->>EC: _running = false
+    EC->>EC: 更新水位线：已提取到第 12 条
+    EC->>EC: 无脏标记 → 退出循环
+    EC->>EC: 置为空闲
     EC-->>REPL: ["pytest_pref"]
 ```
 
-这个 trace 展示了提取的完整生命周期：REPL 轮次结束触发请求 → Coordinator 检查增量是否达到阈值 → 加载已有记忆做去重 → 格式化最近对话 → 调用 LLM 分析 → 解析 JSON → 保存文件 → 更新索引 → 更新水位线。如果提取期间又有新轮次到来（_dirty=true），Coordinator 会在当前提取完成后自动重新进入循环。
+这个 trace 展示了提取的完整生命周期：REPL 轮次结束触发请求 → Coordinator 检查增量是否达到阈值 → 加载已有记忆做去重 → 格式化最近对话 → 调用 LLM 分析 → 解析 JSON → 保存文件 → 更新索引 → 更新水位线。如果提取期间又有新轮次到来（打上脏标记），Coordinator 会在当前提取完成后自动重新进入循环。
 
-代价是每轮提取需要一次 API 调用（虽然用 max_tokens=4096 的低配 call_model）。对于快速连续的多轮对话，ExtractionCoordinator 的 coalescing 机制避免堆积（见设计选择 3）。另外提取质量完全依赖模型的判断力——prompt 中的负面清单再详细，也无法覆盖所有"不该保存"的情况。
+代价是每轮提取需要一次 API 调用（虽然用低配的模型调用，输出上限只有 4096）。对于快速连续的多轮对话，提取合并机制避免堆积（见设计选择 3）。另外提取质量完全依赖模型的判断力——prompt 中的负面清单再详细，也无法覆盖所有"不该保存"的情况。
 
 ### 设计选择 2：项目隔离 + 文件持久化 + 索引注入
 
@@ -98,9 +98,9 @@ sequenceDiagram
 
 代价是记忆没有过期机制。一旦保存，记忆永远存在（除非用户手动删除文件或模型在对话中被要求删除）。长期使用的积累可能导致索引膨胀，system prompt 中列出几十条记忆索引会占用可观的 token 空间。
 
-### 设计选择 3：ExtractionCoordinator 的 coalescing 并发控制
+### 设计选择 3：提取合并机制的并发控制
 
-ExtractionCoordinator 解决"多轮对话快速连续触发提取"的并发问题。设计要点：同一时刻只允许一个提取任务运行（asyncio.Lock + _running 标记），如果提取运行期间有新轮次到来，设置 dirty 标记而非启动新提取，当前提取完成后若 dirty 已设置则自动重新提取。
+提取合并机制解决"多轮对话快速连续触发提取"的并发问题（源码中的 ExtractionCoordinator）。设计要点：同一时刻只允许一个提取任务运行，如果提取运行期间有新轮次到来，只打一个脏标记而非启动新提取，当前提取完成后若脏标记已置则自动重新提取。
 
 ```mermaid
 stateDiagram-v2
@@ -109,15 +109,15 @@ stateDiagram-v2
     state "重新提取" as RERUN
 
     [*] --> IDLE
-    IDLE --> RUNNING: request_extraction()\n_running = True
-    RUNNING --> RUNNING: 新轮次到来\n_dirty = True（coalescing）
-    RUNNING --> RERUN: 提取完成 + dirty == True\n_dirty = False
-    RERUN --> RERUN: 又有新轮次\n_dirty = True
-    RERUN --> IDLE: 提取完成 + dirty == False\n_running = False
-    RUNNING --> IDLE: 提取完成 + dirty == False\n_running = False
+    IDLE --> RUNNING: 请求提取
+    RUNNING --> RUNNING: 新轮次到来，打脏标记（合并）
+    RUNNING --> RERUN: 提取完成且脏标记已置，清脏标记
+    RERUN --> RERUN: 又有新轮次，重新打脏标记
+    RERUN --> IDLE: 提取完成且无脏标记
+    RUNNING --> IDLE: 提取完成且无脏标记
 ```
 
-水位线机制（_last_extracted_count）追踪已处理的可见消息数，每次只提取增量部分。MIN_NEW_MESSAGES = 4 的阈值确保短对话不触发提取（避免浪费 API 调用）。这保证了最后一个轮次一定会被扫描到（不丢失工作），同时避免了 N 轮快速对话产生 N 次提取调用。
+水位线机制追踪已处理的可见消息数，每次只提取增量部分。增量不足约 4 条消息的阈值确保短对话不触发提取（避免浪费 API 调用）。这保证了最后一个轮次一定会被扫描到（不丢失工作），同时避免了 N 轮快速对话产生 N 次提取调用。
 
 代价是提取有延迟——如果用户快速输入 10 轮，提取只在第 1 轮和第 10 轮各执行一次（中间 8 轮被 coalesce）。第 2-9 轮的内容在第 10 轮的提取中被覆盖。如果第 1 轮提取期间模型响应很慢（如 30 秒），用户可能已经开始了新话题，但提取仍在分析旧对话。
 

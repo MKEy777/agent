@@ -42,6 +42,37 @@ graph LR
 
 代价是技能无法被模型自主发现和组合。如果用户忘了触发某个技能，模型不会主动使用它。system prompt 中会列出可用技能的名称和描述（作为提示），但模型不能自己"调用"一个技能——它只能建议用户触发。另外技能 prompt 注入后成为 transcript 的一部分，会占用上下文窗口空间，长对话中可能被 auto-compact 压缩掉。
 
+下面以用户输入 /commit 触发一个提交规范技能为例，trace 从命令到技能内容进入模型上下文的完整链路：
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant REPL as REPL 主循环
+    participant CMD as 命令注册表
+    participant SK as 技能查找
+    participant MSG as transcript
+    participant M as 模型
+
+    Note over REPL: 启动时已把每个技能注册为同名 slash 命令
+    U->>REPL: 输入 /commit
+    REPL->>REPL: 识别以 / 开头 → 解析命令名和参数
+    REPL->>CMD: 查 commit 命令
+    CMD-->>REPL: 返回特殊标记 __SKILL__commit
+    REPL->>SK: 按名称查找技能（大小写不敏感）
+    alt 找到
+        SK-->>REPL: 技能对象（含 prompt 正文）
+        REPL->>MSG: 把技能 prompt 作为一条用户消息追加
+        Note over MSG: 技能内容成为 transcript 的一部分
+        REPL->>M: 下一轮请求带上这条消息
+        M-->>U: 按技能指令执行（如按规范写 commit）
+    else 未找到
+        SK-->>REPL: 空
+        REPL-->>U: 提示技能不存在并列出可用技能
+    end
+```
+
+这条链路揭示了技能的本质：它不是模型的一个 action，而是"把一段预写好的指令塞进对话"。触发权在用户手里（斜杠命令），注入点是普通用户消息（而非 system prompt），所以技能天然是一次性的、会随上下文压缩而淡出——这正好符合"临时改变模型行为"的定位。启动时把每个技能注册成同名命令这一步，是让"用 Markdown 文件定义能力"能被用户零学习成本触发的关键。
+
 ### 设计选择 2：frontmatter 可选 + 宽容解析
 
 技能文件支持可选的 YAML frontmatter（被 --- 包围的头部区域），定义 name、description、trigger 三个元数据字段。没有 frontmatter 的文件以文件名（不含 .md 后缀）作为技能名，整个文件内容作为 prompt。frontmatter 解析不依赖 PyYAML 库，而是用简单的逐行 key: value 匹配——只支持最基础的格式，足以覆盖技能元数据的需求。

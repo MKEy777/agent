@@ -72,7 +72,7 @@ stateDiagram-v2
     P1 --> [*]: 退出 3 — turn_count >= max_turns
 ```
 
-Phase 1 做两件事：normalize_messages_for_api() 将内部 Message 转为 API 格式（确保 user/assistant 交替、以 user 开头、tool_use/tool_result 配对），然后 estimate_messages_tokens() 估算 token 量，超过 context_window 的 70% 时触发 auto-compact——用 max_tokens=4096 的低配 call_model 生成摘要替换旧消息，保留最近 4 轮。连续压缩失败超过 3 次后 should_auto_compact 返回 False，避免死循环浪费 API 调用。
+Phase 1 做两件事：normalize_messages_for_api() 将内部 Message 转为 API 格式（确保 user/assistant 交替、以 user 开头、tool_use/tool_result 配对），然后估算 token 量——不调 API 精确计数，而是按字节折算（纯文本约 4 字节/token，JSON 结构化内容约 2 字节/token），零成本、每轮都能算。估算值达到"上下文窗口减去约 13K token 固定缓冲区"的阈值时触发 auto-compact：用低配的模型调用（输出上限 4096）生成摘要替换旧消息，保留最近 4 轮原文；消息不足约 10 条时放弃压缩。估算不含 system prompt 和工具 schema、系统性偏低，靠固定缓冲区吸收误差。连续压缩失败超过 3 次后不再触发，避免死循环浪费 API 调用。
 
 Phase 2 通过 call_model 闭包发起流式 API 调用。关键优化是 StreamingToolExecutor 的「流式提前执行」：当 API 还在输出后续 token 时，已完整解析的 tool_use block 通过 executor.add_tool() 立即在后台 asyncio.Task 中启动执行。TextDelta 立即 yield 供 UI 逐字打印，ToolUseStart 触发工具启动，TurnComplete 携带 stop_reason 决定下一阶段走向。
 
@@ -186,7 +186,7 @@ build_system_prompt() 返回的是 list[str] 而非拼接后的单个字符串�
 
 **二次布线解决循环依赖。** _build_registry() 先注册所有工具的骨架版（不含运行时依赖），_build_engine() 创建 TaskRegistry、TeamContext 等运行时组件后再用完整版覆盖注册。engine_ref 列表闭包解决 call_model_factory 需要 engine 但 engine 构造又需要 factory 的鸡生蛋问题。工具注册分三层：Tier 1 文件操作工具随 main.py 启动绑定，Tier 2 扩展工具 lazy import 减少启动时间，Tier 3 协作工具（Agent/Team/SendMessage）需要 call_model_factory 运行时注入。
 
-**token 预算分级管理。** auto-compact 在 Phase 1 主动检查（70% 阈值），reactive compact 在 Phase 3 收到 413 后被动触发（只尝试一次）。current_max_tokens 从 16384 起步，首次 max_output_tokens 截断后 escalate 到 65536——短对话不需要为长输出场景买单。auto_compact_fn 本身是同一个 call_model 的低配版（max_tokens=4096），递归调用同一个函数子集，没有额外适配层。
+**token 预算分级管理。** auto-compact 在 Phase 1 主动检查（估算值达到"窗口 − 固定缓冲"即触发），reactive compact 在 Phase 3 收到 413 后被动触发（只尝试一次）。current_max_tokens 从 16384 起步，首次 max_output_tokens 截断后 escalate 到 65536——短对话不需要为长输出场景买单。压缩用的摘要调用是同一个模型调用闭包的低配版（输出上限 4096），递归复用同一个函数子集，没有额外适配层。压缩机制与其他项目的横向对比见 comparisons/13-context-compaction。
 
 **call_model 的三层抽象。** 最内层 stream_response()（原始 SSE → QueryEvent 转换），中间 make_call_model() 闭包（绑定 client + model），最外层 make_call_model_factory()（工厂的工厂，延迟 model 绑定时机供 AgentTool 运行时选择）。测试时注入任一层即可，最方便的是直接注入 mock call_model 闭包。
 

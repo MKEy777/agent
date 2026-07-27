@@ -39,6 +39,31 @@ token 用量追踪不是通过独立的 metrics 采集器，而是内嵌在 Quer
 
 代价是只有会话级的粗粒度统计。没有按工具分类的 token 消耗（不知道 Bash 工具的结果占了多少 input_tokens），没有按轮次的趋势图，没有跨会话的历史对比。如果需要这些，就需要在 TurnComplete 消费点增加结构化日志或 metrics 上报。
 
+下面以"一轮对话的 token 用量如何被统计并最终通过 /cost 展示"为例，trace 这条观测数据的完整流转：
+
+```mermaid
+sequenceDiagram
+    participant API as 模型 API
+    participant SR as 流式解析
+    participant QL as query_loop
+    participant REPL as REPL 事件消费
+    participant ACC as 引擎累加器
+    participant U as 用户
+
+    API-->>SR: message_start（携带 input/cache token）
+    API-->>SR: message_delta（携带 output token）
+    SR->>QL: 组装本轮 usage
+    QL-->>REPL: 轮次完成事件（附带 usage）
+    REPL->>ACC: 累加到会话级 input/output 总量
+    REPL->>U: 当轮即时显示"本轮 X in / Y out"
+    Note over ACC: 跨轮累加，进程内存活
+    U->>REPL: 输入 /cost
+    REPL->>ACC: 读取累加值
+    ACC-->>U: 展示会话累计用量
+```
+
+这条链路的关键在于 token 数据是"顺流而下"的副产品，而不是专门去采集的：API 在流式响应的头尾分别吐出输入和输出 token（分离采集避免重复计数），解析层把它们拼进本轮 usage，随轮次完成事件一起流到消费端，消费端顺手累加。整条链路没有一处专门的"埋点"代码，观测能力完全寄生在既有的事件协议上——这是"零基础设施"的具体含义。代价也在图里：累加器活在进程内存里，进程一退出会话统计就没了，没有任何持久化或跨会话聚合。
+
 ### 设计选择 2：Python logging 做诊断
 
 各模块用标准 Python logging 记录诊断信息：logger.warning 记录工具执行失败、auto-compact 失败、MCP 连接超时等异常路径；logger.info 记录 MCP 工具注册、记忆保存等关键操作；logger.debug 记录 mailbox 读写、memory index 更新等高频低价值信息。

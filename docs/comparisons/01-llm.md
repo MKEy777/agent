@@ -91,7 +91,7 @@ stateDiagram-v2
 
 ### claudecode：闭包注入——"不抽象"的选择
 
-claudecode 没有 Provider 接口、没有注册表、没有策略模式。它的"抽象"完全通过三层闭包实现：stream_response() 做 SSE 状态机转换，make_call_model() 返回绑定了 client + model 的闭包，make_call_model_factory() 是工厂的工厂。query_loop 只认识一个签名：(**kwargs) -> AsyncIterator[QueryEvent]。
+claudecode 没有 Provider 接口、没有注册表、没有策略模式。它的"抽象"完全通过闭包分层实现：最内层把原始 SSE 事件流转换为内部事件（stream_response），中间层把 provider 客户端和模型名固定进一个"只需传消息"的闭包，最外层再包一层工厂以便子代理在运行时选择不同模型。query_loop 只认识一个签名：(**kwargs) -> AsyncIterator[QueryEvent]。
 
 模型切换不用多 Provider 路由，而是在 REPL 层直接替换 client 实例。百炼支持之所以能工作，是因为百炼实现了 Anthropic API 兼容接口，SSE 事件格式完全相同。错误分类极简：429/529 和连接错误标记为可恢复，其他一律不可恢复。
 
@@ -145,6 +145,12 @@ graph LR
 
 **非标准字段的处理策略**是另一个有趣的分歧。deer-flow 和 hermes-agent 都面临"推理模型字段在规范化时丢失"的问题，但解法不同：deer-flow 在 LangChain 解析后回放（因为 LangChain 是中间层），hermes-agent 在规范化时直接保留到 provider_data（因为自己做解析）。openclaw-TS 通过插件钩子让每个 provider 自己决定保留什么，claudecode 和 openclaw-Python 则完全不处理——前者只用 Anthropic 协议（字段本来就认识），后者定位简单不需要多轮 thinking 回放。
 
+**prompt cache 断点的摆放**是全库文档反复提到"prefix cache"却最少被讲透的机制。Anthropic 式缓存的规则是：请求中最多标记 4 个缓存断点（cache_control 标记），API 把断点之前的全部前缀缓存下来，下次请求若前缀逐字节相同就按约一折计费读取。断点放哪里因此成了一道设计题。hermes 的策略是"系统提示词 + 最后三条非系统消息"共四个断点——系统提示词断点覆盖恒定不变的大头，最后三条消息的断点随对话前移滑动：本轮的"最后一条"在下轮成为倒数第二条，其前缀已在上轮被缓存，天然形成增量缓存链；实现里还要跳过空内容消息（有些中转网关会忽略打在空消息上的标记，浪费宝贵的断点名额）。openclaw-TS 同样遵守四断点预算，但把复杂度花在 provider 适配上：直连 Anthropic、Bedrock 上的 Claude、自建 Anthropic 兼容端点三种情形的标记语义各不相同，长 TTL（1 小时）只对可信任的官方域名开放；系统提示词还支持"稳定前缀/动态后缀"的显式分界，断点只打在稳定前缀上。claudecode 的做法最朴素但同样有效：系统提示词按段落拼装、静态段落在前动态段落在后，靠段落顺序保证可缓存前缀最长。deer-flow 把这件事委托给 LangChain。这个岔路口的判断标准是"消息前缀的稳定性由谁保证"：自己管前缀就要自己摆断点，交给框架就接受框架的默认策略。
+
+**token 计数有三种来源，各自服务不同场景**。本地估算（claudecode 按字节折算、deer-flow 按字符折算）零成本、每轮可算，用于压缩阈值这类高频判断，精度差 10-20% 但阈值留了余量；API 精确计数（专门的 count-tokens 接口）要一次网络往返，只用于计费展示这类低频场景；provider 回传的真实用量（响应里的 usage 字段）最准但只能事后拿到，openclaw-TS 用它做压缩触发判断，还专门写了一层规范化把 20 多种 provider 的 usage 字段变体（含缓存读写、推理 token 的各种命名）统一成标准结构——多供应商平台不做这层统一，成本核算就无从谈起。三种来源的组合模式是：事前用估算、事后用真实用量校准、计费用精确值（与 13-context-compaction 的阈值设计直接相关）。
+
+**流式工具参数解析**藏着一个所有自研接入层都会踩的坑：工具调用的参数以 JSON 片段的形式增量到达，每个片段都不是合法 JSON，不能逐段解析。claudecode 的做法是只累积字符串、等内容块结束事件才做一次完整解析，解析失败静默降级为空参数并记诊断日志——工具会收到空参数而报错，模型看到错误可以重试，比整个循环崩溃好。openclaw-TS 更激进：每个片段到达都用容错解析器尝试一次（能容忍不完整 JSON），让 UI 可以实时展示参数拼装过程，块结束时再做最终解析。hermes 干脆不做流式参数解析——等响应完整后统一规范化，代价是工具启动时机晚。这里还有一个隐蔽的关联问题：thinking 块带签名，签名针对"它在响应中的位置之前的内容"计算，如果 thinking 与工具调用交错出现、回放时顺序错乱，API 会直接拒绝请求——hermes 和 openclaw-TS 都为此专门保留了原始块序列通道。
+
 ## 面试要点
 
 **1. 如果你从零设计一个 LLM 接入层，预期支持 5-10 个 provider，你会选哪种抽象模式？为什么？**
@@ -157,5 +163,9 @@ graph LR
 
 **3. claudecode 的"不抽象"选择在什么条件下是合理的？如果它要接入 OpenAI 格式（SSE 事件结构完全不同），最小改动路径是什么？**
 
-参考答案方向：合理条件是"所有目标 provider 走同一协议"。claudecode 的百炼支持之所以不需要改 stream_response，是因为百炼实现了 Anthropic API 兼容。接入 OpenAI 格式的最小路径是写一个 stream_response_openai()，把 OpenAI 的 choices[0].delta 格式转换为同样的 QueryEvent 流，然后在 make_call_model 层根据 model 名选择调用哪个 stream_response。query_loop 不需要改一行——它只认识 AsyncIterator[QueryEvent] 签名。这证明闭包注入虽然没有编译期约束，但通过统一的事件协议实现了运行时的可替换性。代价是没有接口约束确保新的 stream_response_openai 覆盖了所有 QueryEvent 类型。
+参考答案方向：合理条件是"所有目标 provider 走同一协议"。claudecode 的百炼支持之所以不需要改 stream_response，是因为百炼实现了 Anthropic API 兼容。接入 OpenAI 格式的最小路径是写一个新的 SSE 转换函数，把 OpenAI 的增量事件格式转换为同样的 QueryEvent 流，然后在闭包工厂层根据 model 名选择调用哪个转换函数。query_loop 不需要改一行——它只认识 AsyncIterator[QueryEvent] 签名。这证明闭包注入虽然没有编译期约束，但通过统一的事件协议实现了运行时的可替换性。代价是没有接口约束确保新的转换函数覆盖了所有事件类型。
+
+**4. prompt cache 断点只有 4 个名额，你会怎么分配？"最后 N 条消息滑动断点"策略为什么能形成增量缓存链？**
+
+参考答案方向：分配原则是"覆盖最大的稳定前缀 + 让增量部分也能续上缓存"。第一个断点给系统提示词（体量最大且恒定），剩下的给消息尾部。滑动断点能形成增量链的原因在于缓存按前缀匹配：本轮打在最后一条消息上的断点，缓存了"从头到这条消息"的全部前缀；下轮新增消息后，这条消息成为倒数第二条，它之前的前缀仍然逐字节相同，缓存直接命中，API 只需增量处理新消息。这条链的脆弱点是"前缀必须逐字节相同"——任何改写历史的操作（上下文压缩、消息重排、动态系统提示词）都会让整条链失效，这正是压缩与 cache 对抗的根源（见 13-context-compaction）。判断标准是"会话轮次 × 单轮前缀体量"：轮次多、前缀大，滑动断点的收益才显著；单轮短会话只需要系统提示词一个断点。
 

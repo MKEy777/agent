@@ -89,10 +89,10 @@ graph TB
     A --> C[CLAUDE.md 层级发现]
     A --> D[settings.json]
     A --> E[.mcp.json]
-    B --> F[main.py _load_env]
-    C --> G[prompts/claudemd.py]
+    B --> F[环境变量合并]
+    C --> G[CLAUDE.md 加载器]
     D --> H[hooks 配置]
-    E --> I[mcp/config.py]
+    E --> I[MCP 配置加载器]
     G --> J[cwd 向上遍历 + @include]
 ```
 

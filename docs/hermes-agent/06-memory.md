@@ -143,9 +143,9 @@ Hermes 的记忆在 system prompt 的 volatile 层（Tier 3）中注入，包含
 
 | 部分 | 来源 | 内容 |
 |------|------|------|
-| Memory Snapshot | agent._memory_store.format_for_system_prompt("memory") | 用户持久记忆（偏好、环境细节、约定） |
-| USER.md Profile | agent._memory_store.format_for_system_prompt("user") | 用户画像（角色、专业、工作习惯） |
-| External Memory Provider | agent._memory_manager.build_system_prompt() | 第三方记忆插件的 prompt block |
+| Memory Snapshot | 记忆存储格式化的"memory"视图 | 用户持久记忆（偏好、环境细节、约定） |
+| USER.md Profile | 记忆存储格式化的"user"视图 | 用户画像（角色、专业、工作习惯） |
+| External Memory Provider | 记忆管理器构建的插件 prompt | 第三方记忆插件的 prompt block |
 
 另外，stable 层（Tier 1）中的 MEMORY_GUIDANCE 常量定义了记忆工具的使用规范（写什么、不写什么、何时更新），仅在 memory 工具存在时注入。
 

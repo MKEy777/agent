@@ -169,7 +169,7 @@ Hermes 的 system prompt 由 agent/system_prompt.py 的 build_system_prompt_part
 | External Memory Provider | 第三方记忆插件的 prompt block |
 | Timestamp/Session/Model | 对话开始时间、模型名、Provider 名 |
 
-**缓存策略：** 构建一次后存入 agent._cached_system_prompt，整个 session 复用。仅上下文压缩事件或模型切换触发重建。另有 ephemeral_system_prompt（不进入缓存、不存入 session DB）用于批处理/数据生成场景注入临时指令。
+**缓存策略：** 系统提示词构建一次后缓存起来，整个 session 复用，仅上下文压缩事件或模型切换才触发重建。另有一条不进缓存、不落库的临时系统提示词通道，用于批处理/数据生成场景注入一次性指令。
 
 ## 工程优化
 

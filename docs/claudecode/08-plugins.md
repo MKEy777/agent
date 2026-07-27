@@ -36,6 +36,39 @@ HookConfig 有三个字段：event（触发时机）、command（shell 命令）
 
 这个设计的哲学是"用操作系统原语做扩展"——不需要学习任何 SDK 或 API，会写 shell 脚本就能写 hook。代价是能力有限：hook 只能做通过/阻止的二元决策，不能修改工具参数或替换工具结果。另外 shell 命令的启动开销（fork + exec）在高频工具调用场景下可能成为瓶颈。
 
+下面以模型发起一次 Bash 工具调用、恰好命中一条 PreToolUse hook 为例，trace 一次完整的拦截流程：
+
+```mermaid
+sequenceDiagram
+    participant EX as 工具执行器
+    participant HR as Hook 执行器
+    participant SH as shell 子进程
+    participant T as Bash 工具
+
+    EX->>HR: 工具执行前：查有无匹配的 PreToolUse hook
+    Note over HR: 按 tool_name 过滤，只有匹配的 hook 才触发
+    alt 命中 hook
+        HR->>SH: fork+exec shell 命令，stdin 传入工具名+参数 JSON
+        Note over SH: 10 秒超时，超时则强杀子进程
+        alt 退出码 2（阻止）
+            SH-->>HR: 退出码 2 + stdout 说明
+            HR-->>EX: 返回"被 hook 阻止"的错误结果
+            Note over EX: 工具不执行，模型看到阻止原因自行改路
+        else 退出码 0（放行）
+            SH-->>HR: 退出码 0
+            HR->>T: 放行，执行工具
+            T-->>HR: 工具结果
+            HR->>SH: 触发 PostToolUse hook（审计/通知，如自动 lint）
+            HR-->>EX: 返回工具结果
+        end
+    else 无匹配 hook
+        EX->>T: 直接执行工具
+        T-->>EX: 工具结果
+    end
+```
+
+这条链路的关键在于拦截发生在工具执行的边界上而非工具内部：hook 通过退出码传递二元决策（0 放行、2 阻止），通过 stdin/stdout 传递数据，全程不侵入工具本身的代码。超时强杀保证一个挂起的 hook 不会拖垮整个工具循环；tool_name 过滤保证没配 hook 的工具零额外开销。
+
 ### 设计选择 2：三机制正交而非统一插件接口
 
 Hooks、Skills、MCP 三者解决完全不同维度的扩展需求，没有统一的 Plugin ABC 或注册表。Hooks 拦截控制流（"这个工具能不能执行"），Skills 修改行为（"模型应该怎么工作"），MCP 扩展能力（"模型能做什么新事情"）。三者可以独立使用，也可以组合（比如 MCP 工具的执行同样受 Hooks 拦截和权限检查）。

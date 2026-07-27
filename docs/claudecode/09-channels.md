@@ -39,6 +39,36 @@ query_loop 的 AsyncIterator[QueryEvent] 返回类型意味着任何能消费 as
 
 QueryEngine 的三个入口方法（submit/run_turn/submit_messages）已经覆盖了不同场景：IM 场景用 submit()（接收用户文本，自动包装为 UserMessage），子 Agent 场景用 submit_messages()。IM 集成只需要一个新的控制面（替代 main.py 的 REPL 循环），不需要改 QueryEngine 或 query_loop。
 
+下面以当前终端模式下"用户输入一句话到终端逐字打印回复"为例，trace 一次完整的输入-输出流，看清哪些环节与通道绑定、哪些环节是通道无关的内核：
+
+```mermaid
+sequenceDiagram
+    participant U as 用户（终端）
+    participant REPL as REPL 控制面
+    participant ENG as QueryEngine
+    participant QL as query_loop（内核）
+    participant R as Rich 渲染器
+
+    U->>REPL: 输入一句话（支持多行续行判断）
+    Note over REPL: 判断不是斜杠命令 → 追加为用户消息
+    REPL->>ENG: run_turn()
+    ENG->>QL: 传入 messages + 模型闭包，驱动状态机
+    loop 每产生一个事件
+        QL-->>REPL: yield 事件（文本增量/工具调用/轮次完成）
+        REPL->>R: 交给渲染器
+        alt 文本增量
+            R-->>U: 逐字打印到 stdout
+        else 工具调用/结果
+            R-->>U: 显示工具名与结果预览
+        else 轮次完成
+            R-->>U: 显示本轮 token 用量
+        end
+    end
+    Note over REPL: 轮次结束后持久化会话 + 后台提取记忆
+```
+
+这条链路里，只有首尾两端（读 stdin、Rich 写 stdout）与"终端"这个通道绑定，中间的 QueryEngine 和 query_loop 完全不知道自己在为终端服务——它们只吞用户消息、吐事件流。换成 IM 通道，改的只是这两端：入口把 webhook 消息转成用户消息，出口把事件流累积成一条 IM 回复。内核一行不用动，这正是事件协议解耦的价值。
+
 ### 设计选择 2：AskUser 工具是唯一的交互阻塞点
 
 当前架构中唯一假设"有终端用户在场"的组件是 AskUserQuestion 工具——它需要用户在终端中输入回答。IM 场景下这个工具需要适配：要么通过 IM 消息向用户提问并等待回复（异步阻塞），要么在子 Agent 的工具过滤中排除它（当前 InProcessTeammate 已经这么做了）。

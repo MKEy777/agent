@@ -64,9 +64,9 @@ sequenceDiagram
     AT-->>LEADER: ToolResult("Teammate researcher started")
     Note over LEADER: Leader 继续自己的对话，不阻塞
 
-    IPT->>CV: _teammate_agent_id.set("t1")
-    IPT->>CV: _teammate_team_name.set("default")
-    IPT->>CV: _teammate_agent_name.set("researcher")
+    IPT->>CV: 设置身份：agent_id = "t1"
+    IPT->>CV: 设置身份：team = "default"
+    IPT->>CV: 设置身份：name = "researcher"
 
     Note over IPT: 第1步：构建 child_registry
     IPT->>IPT: 过滤 Agent/AskUser/TeamCreate/TeamDelete
@@ -89,7 +89,7 @@ sequenceDiagram
     IPT->>MB: send("team-lead", TeammateMessage(from="researcher", text=result))
     MB->>FS: 读 team-lead.json → 追加消息 → 写回
 
-    IPT->>CV: reset(token_id), reset(token_team), reset(token_name)
+    IPT->>CV: 任务结束，重置全部身份（用 token 精确回退）
 
     Note over LEADER: 下一轮 turn 开始前
     LEADER->>MB: inbox polling → receive("team-lead")
