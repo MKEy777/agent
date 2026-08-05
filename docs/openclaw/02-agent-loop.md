@@ -134,7 +134,7 @@ TS 版实现了更精细的 tool-loop-detection.ts（25KB）：
 
 ### 设计选择五：流式事件广播与可观测性
 
-Python 版的 Gateway 在 run_agent_for_session 中遍历 AgentEvent 流，每个事件都广播到 WebSocket 连接的前端工作台：TEXT_DELTA → runtime.model.delta，TOOL_CALL_START → runtime.tool.started，TOOL_CALL_RESULT → runtime.tool.finished。所有广播数据经过脱敏（密钥替换为 [redacted]）和截断（6000 字符上限）。
+Python 版的 Gateway 在 run_agent_for_session 中遍历 AgentEvent 流，每个事件都广播到 WebSocket 连接的前端工作台：TEXT_DELTA → runtime.model.delta，TOOL_CALL_START → runtime.tool.started，TOOL_CALL_RESULT → runtime.tool.finished。所有广播数据经过脱敏（密钥替换为 [redacted]）和截断（6000 字符上限）。网关连接、认证与广播治理的服务端视角见 14-gateway.md。
 
 TS 版的 embedded-agent-subscribe.ts（55KB）+ embedded-agent-subscribe.handlers.tools.ts（59KB）做同样的事，但规模大得多：除了基本的文本流和工具事件，还处理 thinking 流（模型的推理过程）、multi-turn 工具并行、工具结果流式返回等。
 

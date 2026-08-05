@@ -69,7 +69,7 @@ graph TB
 
 ### openclaw：双向 MCP + Bridge 模式
 
-openclaw TS 版同时做客户端和服务器。客户端侧（agent-bundle-mcp-runtime.ts 44.5KB）管理外部 MCP 服务器生命周期，获取工具列表后经 toolFilter 过滤注册到统一工具面。服务器侧通过 OpenClawChannelBridge（681 行）封装 Gateway WebSocket 连接管理、事件队列 + 游标、审批状态管理，MCP 工具层保持极薄。
+openclaw TS 版同时做客户端和服务器。客户端侧（agent-bundle-mcp-runtime.ts 44.5KB）管理外部 MCP 服务器生命周期，获取工具列表后经 toolFilter 过滤注册到统一工具面。服务器侧通过 OpenClawChannelBridge（681 行）封装 Gateway WebSocket 连接管理、事件队列 + 游标、审批状态管理，MCP 工具层保持极薄。Bridge 所封装的 Gateway 服务本体见 openclaw/14-gateway.md。
 
 服务器端选择拉模式（events_poll/events_wait）而非推模式——MCP 客户端实现质量参差不齐，有些处理不好服务器主动推送。拉模式让客户端控制消费节奏，服务器只维护有界队列（1000 条上限）和游标。
 

@@ -58,7 +58,7 @@ graph TB
 
 ### openclaw：transport-only 纯传输
 
-openclaw 的核心哲学是"通道不拥有产品逻辑"——通道只做消息的收发和格式转换，所有业务逻辑归核心。Python 版支持飞书 + WebChat（9 级路由优先级决定 session 归属，WebSocket 长连接 varint 帧编码）。TS 版 15+ 通道适配器，流式投递 4 种模式，消息防抖 500ms 窗口合并，去重 600s TTL。
+openclaw 的核心哲学是"通道不拥有产品逻辑"——通道只做消息的收发和格式转换，所有业务逻辑归核心。Python 版支持飞书 + WebChat（9 级路由优先级决定 session 归属，WebSocket 长连接 varint 帧编码）。TS 版 15+ 通道适配器，流式投递 4 种模式，消息防抖 500ms 窗口合并，去重 600s TTL。通道之上的 gateway 服务层形态的横向对比见 comparisons/14-gateway.md。
 
 ```mermaid
 graph LR

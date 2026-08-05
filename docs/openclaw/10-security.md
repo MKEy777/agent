@@ -23,7 +23,7 @@
 
 TS 版的安全不是单点防护，而是四层纵深：
 
-1. **审计层**（audit.ts，1549 行）：50+ 检查项，检测配置错误、危险标志、插件信任、通道安全、Gateway 认证。输出结构化 SecurityAuditReport。
+1. **审计层**（audit.ts，1549 行）：50+ 检查项，检测配置错误、危险标志、插件信任、通道安全、Gateway 认证。输出结构化 SecurityAuditReport。Gateway 认证机制的细节见 14-gateway.md。
 2. **策略层**（tool-policy-pipeline.ts）：多步过滤决定哪些工具可用（sandbox → profile → provider → sender → group → subagent）。
 3. **沙箱层**（sandbox/，77 个文件）：Docker 容器隔离 + SSH 远程沙箱 + 浏览器沙箱，代码执行在隔离环境中进行。
 4. **审批层**（exec-approval-request.ts）：高风险操作（bash 执行、文件写入）需要用户实时确认。
