@@ -110,157 +110,153 @@ quadrantChart
 
 # 通用 Agent 模块全景
 
-上文回答了"这四个项目分别是什么"，本节回答另一个问题：**一个 Agent 系统的设计到底覆盖哪些通用模块**。无论项目定位差异多大，它们最终都要回答同一组问题——模型怎么调、循环怎么转、工具怎么执行、超窗怎么办、第三方怎么扩展、进程怎么常驻、执行怎么不失控。这 14 个模块就是这组问题的完整清单，也是后续 14 篇横向对比文档的骨架。
+上文回答了"这四个项目分别是什么"，本节回答另一个问题：**一个 Agent 系统的设计到底覆盖哪些通用主题**。无论项目定位差异多大，它们最终都要回答同一组问题——用户从哪里进来、模型怎么调、循环怎么转、状态怎么存、窗口怎么装、记忆怎么留、工具怎么执行、执行在哪跑、权限怎么管、运行怎么看得见。这 10 个主题就是这组问题的完整清单，也是后续 10 篇横向对比文档的骨架。
 
 ## 通用模块分层架构
 
-14 个模块按依赖方向可以分为四层：内核层回答"Agent 怎么运转"，扩展层回答"能力怎么生长"，接入层回答"用户从哪里进来"，治理层回答"怎么管得住、看得见"。
+10 个主题按依赖方向可以分为四层：内核层回答"Agent 怎么运转"，记忆层回答"跨会话怎么不忘"，状态与运行时层回答"过程怎么不丢、执行怎么不失控"，接入与治理层回答"谁从哪进来、怎么管得住、看得见"。
 
 ```mermaid
 graph TB
-    subgraph access[接入层]
-        CH[消息通道 / IM 集成]
-        GW[Gateway / 对外服务层]
-    end
-    subgraph extension[扩展层]
-        MCP[MCP 集成]
-        SK[技能系统]
-        MEM[记忆系统]
-        SUB[子代理 / 编排]
-        PLU[插件 / 扩展系统]
-    end
     subgraph kernel[内核层]
-        LLM[LLM 接入层]
-        LOOP[Agent 主循环]
-        TOOL[工具系统]
-        CMP[上下文压缩]
+        MODEL[02 模型接入层]
+        LOOP[03 编排与主循环]
+        CTX[05 上下文工程]
+        TOOL[07 工具与扩展生态]
     end
-    subgraph govern[治理层]
-        SEC[安全与沙箱]
-        CFG[配置与环境管理]
-        OBS[可观测性]
+    subgraph memory[记忆层]
+        MEM[06 长期记忆]
     end
-    CH --> LOOP
+    subgraph statelayer[状态与运行时层]
+        STATE[04 会话状态与持久化]
+        RUNTIME[08 执行运行时与隔离]
+    end
+    subgraph access[接入与治理层]
+        GW[01 对外服务层与消息通道]
+        GRD[09 执行前拦截与信任治理]
+        OBS[10 可观测性]
+    end
     GW --> LOOP
-    MCP --> TOOL
-    SK --> LOOP
-    MEM --> LOOP
-    SUB --> LOOP
-    PLU --> LOOP
-    LOOP --> LLM
+    LOOP --> MODEL
+    LOOP --> CTX
     LOOP --> TOOL
-    LOOP --> CMP
-    SEC -.-> LOOP
-    CFG -.-> LOOP
+    TOOL --> RUNTIME
+    MEM --> CTX
+    STATE -.-> LOOP
+    GRD -.-> LOOP
     OBS -.-> LOOP
 ```
 
-内核层是所有项目都绕不开的四个模块：LLM 接入层负责屏蔽提供商差异并处理调用失败；Agent 主循环负责驱动多轮推理与工具调度；工具系统负责让模型看到并安全执行工具；上下文压缩负责在对话超出窗口时缩小历史。扩展层回答"能力如何生长"：MCP 集成引入标准化的外部工具，技能系统注入按需激活的程序性知识，记忆系统沉淀跨会话事实，子代理与编排把任务拆给并行 Agent，插件与扩展系统向第三方开放扩展点。接入层是用户进入 Agent 的两个入口：消息通道对接各类 IM 平台，Gateway 把内核托管为常驻服务对外提供统一接入面。治理层则是贯穿所有层的横切关注点：安全与沙箱约束执行，配置与环境管理收敛行为来源，可观测性暴露运行状态。
+内核层是所有项目都绕不开的四个主题：模型接入层负责屏蔽提供商差异并处理调用失败；编排与主循环负责驱动多轮推理与工具调度，并承担子代理委派；上下文工程负责决定窗口里装什么、何时装、装满之后怎么缩小；工具与扩展生态负责让模型在正确的时机看到正确的能力，并统一承接 MCP、技能、插件三类扩展的注册与调度。记忆层独立成层：长期记忆从对话中提取跨会话事实，只在上下文组装时通过一条注入边与内核相连。状态与运行时层支撑内核的持久与安全：会话状态与持久化承载跨请求的进度、检查点与防重入纪律，执行运行时与隔离决定命令放行之后在哪个环境里跑。接入与治理层则是贯穿所有层的横切关注点：对外服务层暴露接入面并承担平台适配与配置治理，执行前拦截与信任治理约束每个动作的放行，可观测性暴露运行状态。
 
-## 14 个模块卡片
+## 10 个主题卡片
 
-每个模块卡片给出三样东西：跨项目不变的职责定义、2-3 条通用设计哲学（核心权衡）、以及四个项目的形态差异一句话。详细展开见对应的横向对比文档。
+每个主题卡片给出三样东西：跨项目不变的职责定义、2-3 条通用设计哲学（核心权衡）、以及四个项目的形态差异一句话。详细展开见对应的横向对比文档。
+
+需要特别说明一个术语冲突：模型接入层中也会提到"LLM gateway"，那里指的是 LLM 网关这一类提供商（典型问题是 thinking 参数的处理分支），属于模型调用的抽象问题；而 01-gateway 主题指的是把 Agent 内核托管为服务的对外网关，两者是完全不同的概念。
 
 ### 内核层
 
-| 模块 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
+| 主题 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
 |------|---------|-------------|---------------|
-| LLM 接入层 | 提供统一的模型调用接口，并在调用失败时按成本递增顺序走恢复链：重试、换 key、换模型、换提供商 | 抽象深度由需要支持的提供商数量决定，两家和一百家的抽象长得完全不一样；非标准字段（如推理轨迹 thinking）在回放时的处理是所有项目都绕不开的脏活 | deer-flow 用修补子类加反射工厂；hermes 用传输策略加注册表覆盖 30+ 提供商；openclaw Python 侧靠鸭子类型、TS 侧靠插件注册覆盖 140+；claudecode 用闭包注入、仅支持两家 |
-| Agent 主循环 | 可靠地驱动"推理 → 工具执行 → 结果回注"的多轮迭代，做到不丢状态、不陷入无限循环 | 复杂度放在中间件里分散还是放在一个大函数里集中，是首要分岔；死循环检测应先给模型自我纠正的机会，而不是直接打断 | deer-flow 是 LangGraph 状态图加 38 个中间件；hermes 是单函数大循环；openclaw Python 版三层嵌套、TS 版单循环加大量状态变量；claudecode 是纯函数 async generator 状态机 |
-| 工具系统 | 让模型在正确的时机看到正确的工具，并安全地执行它们 | 注册表显式声明与反射自动发现是两种相反的组织方式；全量绑定费 token、按需搜索多一轮往返；并发执行时的读写冲突需要明确策略 | deer-flow 用延迟目录加按需搜索；hermes 自注册加 AST 扫描加预算分层；openclaw Python 版全量绑定、TS 版按需搜索；claudecode 用注册表加输出硬限制 |
-| 上下文压缩 | 对话超出窗口时缩小历史，同时保证模型仍然记得当前任务 | 硬截断与 LLM 摘要是质量与成本的基本权衡；压缩改写前缀会击穿 prompt cache，省下的 token 要与损失的缓存命中对账；预检与响应式双触发互补 | claudecode 保尾全摘要；deer-flow 把摘要移出消息通道以保住缓存；hermes 用滚动摘要加多级降级；openclaw TS 版固定模板加检查点、Python 版质量评分加兜底 |
+| 模型接入层 | 为上层循环提供统一的模型调用接口，屏蔽提供商协议差异，并在调用失败时按成本递增顺序走恢复链：重试、换 key、换模型、换提供商 | 抽象深度由需要支持的提供商数量决定，两家和一百四十家的抽象长得完全不一样；非标准字段（thinking）的回放处理是所有项目都绕不开的脏活；结构化输出与运行时模型切换是新增的必修项 | deer-flow 用补丁子类加配置驱动工厂（约 10 家）；hermes 用传输策略加注册表覆盖 30+；openclaw Python 靠鸭子类型协议（4 家）、TS 靠插件注册覆盖 140+；claudecode 用闭包注入、仅支持两家 |
+| 编排与主循环 | 可靠地驱动"推理 → 工具执行 → 结果回注"的多轮迭代，明确终止条件，在错误下恢复而不泄漏资源，并把可并行的子任务安全地拆分委派 | 复杂度放在中间件链里分散还是放在一个大函数里集中，是首要分岔；死循环检测应先给模型自我纠正的机会而不是直接打断；子代理的上下文共享度与嵌套深度必须显式建模 | deer-flow 是 LangGraph 状态图加 38 个中间件；hermes 是单函数大循环加委派与咨询双模式；openclaw Python 版三层嵌套、TS 版单循环加状态变量与持久化编排引擎；claudecode 是纯函数异步生成器四阶段状态机 |
+| 上下文工程 | 在有限的上下文窗口里决定"装什么进去、何时装进去、装满之后怎么缩小"：系统提示词分层、规则文件注入时机、压缩的触发阈值与保留策略 | 静态冻结与动态重载的分界决定 prompt cache 命中率；压缩改写前缀会击穿缓存，省下的 token 要与损失的缓存命中对账；预检与响应式双触发互补，摘要失败要有兜底 | claudecode 一次组装、保尾四轮其余全摘要；deer-flow 全静态模板加隐藏动态消息、摘要移出消息通道保 cache；hermes 三层稳定性分级加滚动摘要多级降级；openclaw 五段拼装（Python）加多源编译（TS） |
+| 工具与扩展生态 | 在注册、发现、执行、扩展四个环节上让模型看到并安全使用能力，并统一容纳 MCP 协议接入、技能指令、插件模块三类扩展 | 注册表显式声明与反射自动发现是两种相反的组织方式；工具、技能、插件共用一套注册调度还是各建一套，决定生态的复杂度；结果预算与截断是上下文窗口的最后防线 | deer-flow 用延迟目录加按需搜索、MCP 会话池、config 声明式插件；hermes 自注册加 AST 扫描加三层预算、MCP 双向；openclaw 全量注册（Python）加表达式声明（TS）、MCP 双向加 Bridge、Manifest 加 SDK 生态；claudecode 用 ABC 注册表加 MCP 仅 stdio 加三个正交极简机制 |
 
-需要特别说明一个术语冲突：LLM 接入层中也会提到"LLM gateway"，那里指的是 LLM 网关这一类提供商（典型问题是 thinking 参数的处理分支），属于模型调用的抽象问题；本节第 14 个模块 Gateway 指的是把 Agent 内核托管为服务的对外网关，两者是完全不同的概念。
+### 记忆层
 
-### 扩展层
-
-| 模块 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
+| 主题 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
 |------|---------|-------------|---------------|
-| MCP 集成 | 让外部 MCP 服务器提供的工具透明地接入 Agent，并管理连接的生命周期 | 透明化接入与显式管理连接是两种取向；远程工具特有的失败模式（断连、token 过期）决定重连策略是否必需；双向 MCP（Agent 同时做客户端和服务器）的复杂度远超单向 | deer-flow 用会话池；hermes 支持双向连接加退避重连；openclaw TS 版双向加 OAuth 与 mTLS、Python 版无此模块；claudecode 仅支持 stdio 传输且无重连 |
-| 技能系统 | 按需激活以 Markdown 指令形式存在的程序性知识，控制上下文占用与安全边界 | 工具提供新的 action、技能提供新的 instruction，两者的加载时机是核心矛盾，解法是渐进披露；自然语言指令本身存在注入风险，需要双层扫描；技能需要完整的生命周期管理 | deer-flow 双重扫描加工具隔离；hermes 三层渐进披露且技能可自维护；openclaw 五来源加载加技能市场；claudecode 仅有斜杠命令形态 |
-| 记忆系统 | 从对话中提取持久化事实，并在需要时跨会话检索注入 | 短期窗口管理归上下文压缩、长期持久化归本模块，两者在"压缩会删除尚未提取的事实"这一点上交汇；提取用规则还是用 LLM 是准确性与成本的权衡；冻结快照换缓存命中、实时查询换新鲜度 | deer-flow 用防抖队列加信号检测；hermes 用全文检索加冻结快照，另有实时工具查询；openclaw 三阶段整合；claudecode 后台 LLM 提取加索引文件 |
-| 子代理 / 编排 | 安全地生成和管理并行子 Agent，包括任务委派与结果回收 | 上下文共享还是完全隔离决定了子代理的独立性；嵌套深度必须受限，否则递归失控；结果回传需要明确的状态合约 | deer-flow 用隔离事件循环加加法式状态合约；hermes 支持委派与多模型咨询；openclaw 有编排引擎且任务可转向；claudecode 通过上下文变量在同进程内隔离 |
-| 插件 / 扩展系统 | 允许第三方在不修改核心代码的前提下扩展 Agent 能力 | 模块级插件、函数级工具、脚本级钩子三者的正式程度递进；第三方代码引入信任边界问题；声明式可审计与生态市场是两条路线 | deer-flow 用配置声明式注入；hermes 多源发现加多类插件；openclaw 用 manifest 加 SDK、140+ 扩展；claudecode 三个正交机制合计约 500 行 |
+| 长期记忆 | 从对话中提取跨会话持久化事实，在需要时检索并注入上下文，处理去重、冲突、过期与容量管理 | 短期窗口管理归上下文工程、长期持久化归本篇，两者在"压缩可能删掉尚未提取的事实"这一点上交汇；提取用规则还是 LLM 是准确性与成本的权衡；冻结快照换缓存命中、实时查询换新鲜度 | deer-flow 用防抖队列加信号检测、全量加载加预算截断；hermes 用全文检索加冻结快照、另有实时工具查询；openclaw 对话中产生加三阶段定期整合、全文向量混合检索；claudecode 每轮后台提取加四类分类、索引注入加按需读全文 |
 
-### 接入层
+### 状态与运行时层
 
-| 模块 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
+| 主题 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
 |------|---------|-------------|---------------|
-| 消息通道 / IM 集成 | 让 Agent 核心与具体消息平台解耦，同一内核服务多种聊天入口 | 平台差异应在适配层消化，核心不感知具体 IM；连续快速消息的处理策略（合并、排队、打断）需要显式建模；流式输出能力按平台标志降级 | deer-flow 用通道加消息总线加四种处理策略；hermes 30+ 适配器加能力标志；openclaw Python 版 2 个通道、TS 版 15+；claudecode 无此模块（终端 REPL） |
-| Gateway / 对外服务层 | 将 Agent 内核托管为常驻服务，提供统一接入面（HTTP/WS/RPC），管理会话持久化、鉴权限流、配置热重载与优雅关停 | 进程形态是分叉点——单进程 CLI 不需要它，多客户端、多通道、长期在线就需要；它是控制面与数据面的汇合点，天然最复杂；生命周期治理（请求排空、重启哨兵、关停取证、缩容至零）是常驻进程独有的负担 | hermes 是巨型守护进程；openclaw TS 版是中央控制面服务器、Python 版是精简 RPC 网关；deer-flow 的 harness 层是唯一 HTTP 门面；claudecode 无此模块。注意与消息通道的分工：平台适配归消息通道一篇，服务暴露与生命周期治理归本模块 |
+| 会话状态与持久化 | 为跨请求、跨进程、跨崩溃存活的会话建模状态：检查点形态、持久化与恢复、会话树、超时回收、多实例隔离、防重入 | 存"模型看到的全部消息"还是"能重放执行痕迹的记录"，决定崩溃恢复的能力上限；同一会话的并发纪律放在哪一层是关键决策；检查点与恢复动作决定服务重启的代价 | deer-flow 用图状态检查点加运行账本（SQLite/Postgres）；hermes 用确定性路由键加 SQLite WAL 单行增量；openclaw 用会话树元数据加转录文件；claudecode 用内存消息列表加 JSONL 全量覆盖写 |
+| 执行运行时与隔离 | 决定命令被放行之后在哪个环境里执行：沙箱后端选择、按 owner 的执行路由、路径掩码、workspace 边界、输出脱敏 | 后端数量不是安全性的直接度量，一个后端做到极致硬化可能比六个可选的更安全；拦截与隔离互补，本篇只管"放行之后"；默认姿态（本地零隔离还是默认询问）由信任模型决定 | deer-flow 用双层抽象加 4 种后端（本地/AIO/E2B/微虚拟机）加路径掩码；hermes 用环境工厂驱动 6 种后端；openclaw 仅 TS 版有 Docker 沙箱且激进硬化、Python 版组件未接线；claudecode 无沙箱、宿主直跑加默认询问 |
 
-### 治理层
+### 接入与治理层
 
-| 模块 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
+| 主题 | 职责定义 | 通用设计哲学 | 四项目形态差异 |
 |------|---------|-------------|---------------|
-| 安全与沙箱 | 在强执行能力下防止误操作、注入与密钥泄露 | 执行前拦截与执行时隔离是两种互补手段；密钥应做到"能用但不可见"；工具返回的内容本身是注入攻击面，需要输出脱敏 | deer-flow 沙箱容器支持 4 种后端加路径掩码；hermes 审批拦截加 5 种执行后端；openclaw 四层纵深防御加密钥引用；claudecode 权限三级加 Hooks、无沙箱 |
-| 配置与环境管理 | 合并多来源配置、确定优先级、支持热重载，并让配置变更可追踪 | 集中管理与分散自读影响可审计性；热重载需要划清"可热重载 vs 仅启动生效"的边界；敏感配置与功能配置必须分离 | deer-flow 用 Pydantic 集中管理加签名热重载；hermes 五层优先级链加 Profile；openclaw 模块化 include 加原子写入；claudecode 完全分散 |
-| 可观测性 | 理解 Agent 的运行状态（token 用量、延迟、错误、决策路径），且不引入显著开销 | Agent 的错误包含决策质量问题，因此需要轨迹级追踪而非仅日志；多提供商的用量格式统一是必修课；可观测设施自身应可静默降级 | deer-flow 回调与 OpenTelemetry 双轨；hermes 分级日志加会话库加计费统计；openclaw 全链路事件广播加格式规范化加诊断包；claudecode 事件流内嵌、零基础设施 |
+| 对外服务层与消息通道 | 以什么形态、什么协议、什么信任假设把 Agent 暴露给进程外（或进程内多平台）的调用方：平台适配、连接级认证、事件扇出、配置治理、生命周期治理 | 进程形态是分叉点——单进程 CLI 不需要它，多客户端、多通道、长期在线就需要；连接级认证回答"你是谁"，动作级审批让位给权限治理；配置热重载要划清"可热重载 vs 仅启动生效"的边界 | deer-flow 是唯一 HTTP/SSE 门面，连自家进程内渠道也走同一 API；hermes 是进程内巨型消息运行时，单体控制器管理 30+ 平台适配器；openclaw TS 版是长连接控制面服务器、Python 版是握手即信任的精简 RPC 网关；claudecode 无服务层、纯终端 REPL |
+| 执行前拦截与信任治理 | 在动作执行之前通过权限模型、危险命令审批、Hooks 拦截、密钥管理、凭证脱敏、安装时扫描，防止误操作与注入 | 执行前拦截与执行时隔离是两种互补手段；密钥应做到"能用但不可见"；工具返回的内容本身是注入攻击面，需要输出脱敏；扫描发生在安装时最便宜 | deer-flow 用 RBAC 按角色过滤工具面加环境变量双层黑名单清洗；hermes 用危险命令黑名单审批加多源密钥作用域隔离加 YOLO 冻结；openclaw 用策略管道加五阶段准入门控加 SecretRef 引用系统加安装扫描；claudecode 用白名单加三级权限模式、无安装扫描 |
+| 可观测性 | 让开发者与运维理解 Agent 的运行状态：token 用量、错误模式、决策路径、输出质量，同时不显著增加开销、不泄露敏感信息 | Agent 的错误包含决策质量问题，因此需要轨迹级追踪而非仅日志；多提供商的用量格式统一是必修课；可观测设施自身应可静默降级；脱敏手段与观测价值需要显式权衡 | deer-flow 用回调加 OpenTelemetry 双轨、对接企业 APM；hermes 用分级日志加本地数据库、零依赖；openclaw 用全链路事件广播加诊断遥测、带自愈能力；claudecode 事件流内嵌用量、零基础设施 |
 
 ## 模块 × 项目覆盖矩阵
 
-这张表的价值不止于标注"谁有什么"，**缺失同样是信息**：claudecode 刻意不做 Gateway、消息通道与插件系统，印证了它"最小内核"的定位；openclaw Python 版没有 MCP，说明精简实现把外部工具接入整个让位给了生态规模；配置管理上只有 claudecode 完全分散，其余三家都选择了集中式方案。
+这张表的价值不止于标注"谁有什么"，**缺失同样是信息**：claudecode 刻意不做对外服务层与沙箱，印证了它"最小内核"的定位；openclaw Python 版作为精简参考实现，把远程工具接入（MCP）与沙箱整个让位给 TS 旗舰与生态规模。全表 10 个主题中 8 个被四个项目完整覆盖，说明内核、记忆、状态与治理是 Agent 系统的必要组成部分；分歧全部集中在两个地方——以什么形态暴露（gateway）与放行之后在哪跑（runtime），而这恰恰由部署形态与信任模型决定。
 
-| 模块 | deer-flow | hermes | openclaw-TS | openclaw-Python | claudecode |
+| 主题 | deer-flow | hermes | openclaw-TS | openclaw-Python | claudecode |
 |------|:---:|:---:|:---:|:---:|:---:|
-| 01 LLM 接入层 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 02 Agent 主循环 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 03 工具系统 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 13 上下文压缩 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 04 MCP 集成 | ✓ | ✓ | ✓ | — | 简（仅 stdio） |
-| 05 技能系统 | ✓ | ✓ | ✓ | ✓ | 简（仅斜杠命令） |
-| 06 记忆系统 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 07 子代理 / 编排 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 08 插件 / 扩展系统 | ✓ | ✓ | ✓ | ✓ | —（三正交机制，不构成插件系统） |
-| 09 消息通道 / IM | ✓ | ✓ | ✓ | 简（2 通道） | —（终端 REPL） |
-| 14 Gateway / 对外服务层 | ✓ | ✓ | ✓ | 简（RPC 网关） | — |
-| 10 安全与沙箱 | ✓ | ✓ | ✓ | ✓ | 简（权限分级、无沙箱） |
-| 11 配置与环境管理 | ✓ | ✓ | ✓ | ✓ | 简（完全分散） |
-| 12 可观测性 | ✓ | ✓ | ✓ | ✓ | ✓（事件流内嵌） |
+| 01 对外服务层与消息通道 | ✓ | ✓ | ✓ | 简（RPC 网关） | —（纯终端 REPL） |
+| 02 模型接入层 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 03 编排与主循环 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 04 会话状态与持久化 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 05 上下文工程 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 06 长期记忆 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 07 工具与扩展生态 | ✓ | ✓ | ✓ | 简（无 MCP） | 简（三个正交极简机制） |
+| 08 执行运行时与隔离 | ✓ | ✓ | ✓ | 简（组件未接线） | —（无沙箱，宿主直跑） |
+| 09 执行前拦截与信任治理 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 10 可观测性 | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-四个项目的共同点集中在内核层——14 个模块中没有任何一家缺失内核四件套，说明这是 Agent 系统的必要组成部分；分歧全部发生在扩展层、接入层和治理层，而这些分歧恰恰由项目定位决定：面向个人全场景的项目（hermes、openclaw-TS）几乎全线覆盖，面向企业编排的项目（deer-flow）补齐治理层但生态收敛，面向内核学习的项目（claudecode）只保留必要项。
+四个项目的共同点集中在内核与治理——10 个主题中 8 个四项目全覆盖，说明这些是 Agent 系统的必要组成部分；分歧全部集中在接入形态与执行隔离强度，而这些分歧恰恰由项目定位决定：面向个人全场景的项目（hermes、openclaw-TS）几乎全线覆盖，面向企业编排的项目（deer-flow）补齐治理层但生态收敛，面向内核学习的项目（claudecode）只保留必要项。
+
+## 旧主题去哪了
+
+本节文档体系刚经历一次重组：旧的 14 模块拆并成了新的 10 主题，编号与命名全部重排，旧编号（01-14）与新编号（01-10）之间没有对应关系，阅读时一律以新编号为准。映射关系如下：
+
+| 新主题 | 旧模块来源 | 性质 |
+|--------|-----------|------|
+| 01-gateway | 旧 14-gateway + 09-channels | 合并 |
+| 02-model | 旧 01-llm | 1:1 迁移 |
+| 03-orchestrator | 旧 02-agent-loop + 07-subagents | 合并 |
+| 04-state | 存量仅碎片 | 全新补写 |
+| 05-context | 旧 13-context-compaction + 各项目旧 02 篇的"系统提示词结构"节 | 合并 + 补写 |
+| 06-memory | 旧 06-memory | 1:1 迁移（改写边界互引） |
+| 07-tools | 旧 03-tools + 04-mcp + 05-skills + 08-plugins | 四合一 |
+| 08-runtime | 旧 10-security 的沙箱半部 | 拆分 + 补写 |
+| 09-guardrails | 旧 10-security 的拦截半部 + 散落各篇的扫描/防护 | 拆分重组 |
+| 10-observability | 旧 12-observability | 1:1 迁移（补评估） |
+
+三次大的结构变化值得说明。第一是旧 10-security 一拆为二：沙箱、执行路由、路径掩码这些"放行之后在哪跑"的机制归 08-runtime，权限模型、审批、Hooks、密钥管理这些"放行之前拦不拦"的机制归 09-guardrails，两者以"执行前拦截 vs 执行时隔离"为分界。第二是旧 11-config 化整为零，没有主场：配置层级与热重载治理并入 01-gateway（它本来就是服务层的工作）；多 Profile 与多实例隔离并入 04-state；敏感配置分离与环境变量引用保留并入 09-guardrails；CLAUDE.md 层级发现与注入并入 05-context；技能的多个加载来源并入 07-tools。第三是扩展类模块全部收敛到 07-tools：MCP 集成、技能系统、插件系统不再是并列模块，而是"工具与扩展生态"主题下的三个环节——它们共享注册、发现与调度的组织问题，分开写反而割裂了对比。
 
 ## 阅读导航
 
 ### 横向对比文档（docs/comparisons/）
 
-14 篇横向对比文档按模块编号排列，建议按编号顺序阅读——内核层打基础，扩展层看生长，接入层看形态，治理层看约束。其中第 14 篇 Gateway 为新增模块。
+10 篇横向对比文档按主题编号排列，建议按编号顺序阅读——内核层打基础，记忆与状态看支撑，接入与治理看约束。
 
-| 编号 | 模块 | 文档 |
+| 编号 | 主题 | 文档 |
 |------|------|------|
-| 01 | LLM 接入层 | [01-llm.md](comparisons/01-llm.md) |
-| 02 | Agent 主循环 | [02-agent-loop.md](comparisons/02-agent-loop.md) |
-| 03 | 工具系统 | [03-tools.md](comparisons/03-tools.md) |
-| 04 | MCP 集成 | [04-mcp.md](comparisons/04-mcp.md) |
-| 05 | 技能系统 | [05-skills.md](comparisons/05-skills.md) |
-| 06 | 记忆系统 | [06-memory.md](comparisons/06-memory.md) |
-| 07 | 子代理 / 编排 | [07-subagents.md](comparisons/07-subagents.md) |
-| 08 | 插件 / 扩展系统 | [08-plugins.md](comparisons/08-plugins.md) |
-| 09 | 消息通道 / IM 集成 | [09-channels.md](comparisons/09-channels.md) |
-| 10 | 安全与沙箱 | [10-security.md](comparisons/10-security.md) |
-| 11 | 配置与环境管理 | [11-config.md](comparisons/11-config.md) |
-| 12 | 可观测性 | [12-observability.md](comparisons/12-observability.md) |
-| 13 | 上下文压缩 | [13-context-compaction.md](comparisons/13-context-compaction.md) |
-| 14 | Gateway / 对外服务层（新增） | [14-gateway.md](comparisons/14-gateway.md) |
+| 01 | Gateway（对外服务层与消息通道） | [01-gateway.md](comparisons/01-gateway.md) |
+| 02 | 模型接入 | [02-model.md](comparisons/02-model.md) |
+| 03 | 编排 | [03-orchestrator.md](comparisons/03-orchestrator.md) |
+| 04 | 会话状态 | [04-state.md](comparisons/04-state.md) |
+| 05 | 上下文 | [05-context.md](comparisons/05-context.md) |
+| 06 | 记忆 | [06-memory.md](comparisons/06-memory.md) |
+| 07 | 工具 | [07-tools.md](comparisons/07-tools.md) |
+| 08 | 执行运行时 | [08-runtime.md](comparisons/08-runtime.md) |
+| 09 | 权限治理 | [09-guardrails.md](comparisons/09-guardrails.md) |
+| 10 | 可观测性 | [10-observability.md](comparisons/10-observability.md) |
 
 ### 项目深入文档（docs/{project}/）
 
-每个项目按同一套模块编号组织深入文档，可与横向对比文档按编号对照阅读。deer-flow、hermes-agent、openclaw 各 12 篇已完成，第 14 篇 Gateway 为新增（三个项目均有常驻服务形态，各有独立实现值得展开）；claudecode 保持 12 篇，因其定位不含 Gateway 与消息通道对应的常驻服务形态。
+每个项目按同一套 10 主题编号组织深入文档，可与横向对比文档按编号对照阅读。四个项目各 10 篇已全部完成：openclaw 的 10 篇同时覆盖 TS 与 Python 双实现；claudecode 的 gateway 与 runtime 两篇是"无此形态"的立场论证——进程形态与信任模型决定它不需要服务层和沙箱，这两篇的价值在于讲清楚"为什么不需要"，同样值得一读。
 
-| 模块 | deer-flow | hermes-agent | openclaw | claudecode |
+| 主题 | deer-flow | hermes-agent | openclaw | claudecode |
 |------|-----------|--------------|----------|------------|
-| 01 LLM 接入层 | [01](deer-flow/01-llm.md) | [01](hermes-agent/01-llm.md) | [01](openclaw/01-llm.md) | [01](claudecode/01-llm.md) |
-| 02 Agent 主循环 | [02](deer-flow/02-agent-loop.md) | [02](hermes-agent/02-agent-loop.md) | [02](openclaw/02-agent-loop.md) | [02](claudecode/02-agent-loop.md) |
-| 03 工具系统 | [03](deer-flow/03-tools.md) | [03](hermes-agent/03-tools.md) | [03](openclaw/03-tools.md) | [03](claudecode/03-tools.md) |
-| 04 MCP 集成 | [04](deer-flow/04-mcp.md) | [04](hermes-agent/04-mcp.md) | [04](openclaw/04-mcp.md) | [04](claudecode/04-mcp.md) |
-| 05 技能系统 | [05](deer-flow/05-skills.md) | [05](hermes-agent/05-skills.md) | [05](openclaw/05-skills.md) | [05](claudecode/05-skills.md) |
-| 06 记忆系统 | [06](deer-flow/06-memory.md) | [06](hermes-agent/06-memory.md) | [06](openclaw/06-memory.md) | [06](claudecode/06-memory.md) |
-| 07 子代理 / 编排 | [07](deer-flow/07-subagents.md) | [07](hermes-agent/07-subagents.md) | [07](openclaw/07-subagents.md) | [07](claudecode/07-subagents.md) |
-| 08 插件 / 扩展系统 | [08](deer-flow/08-plugins.md) | [08](hermes-agent/08-plugins.md) | [08](openclaw/08-plugins.md) | [08](claudecode/08-plugins.md) |
-| 09 消息通道 / IM | [09](deer-flow/09-channels.md) | [09](hermes-agent/09-channels.md) | [09](openclaw/09-channels.md) | [09](claudecode/09-channels.md) |
-| 10 安全与沙箱 | [10](deer-flow/10-security.md) | [10](hermes-agent/10-security.md) | [10](openclaw/10-security.md) | [10](claudecode/10-security.md) |
-| 11 配置与环境管理 | [11](deer-flow/11-config.md) | [11](hermes-agent/11-config.md) | [11](openclaw/11-config.md) | [11](claudecode/11-config.md) |
-| 12 可观测性 | [12](deer-flow/12-observability.md) | [12](hermes-agent/12-observability.md) | [12](openclaw/12-observability.md) | [12](claudecode/12-observability.md) |
-| 14 Gateway / 对外服务层（新增） | 待补 | 待补 | 待补 | —（无此模块） |
+| Gateway | [01](deer-flow/01-gateway.md) | [01](hermes-agent/01-gateway.md) | [01](openclaw/01-gateway.md) | [01](claudecode/01-gateway.md) |
+| 模型接入 | [02](deer-flow/02-model.md) | [02](hermes-agent/02-model.md) | [02](openclaw/02-model.md) | [02](claudecode/02-model.md) |
+| 编排 | [03](deer-flow/03-orchestrator.md) | [03](hermes-agent/03-orchestrator.md) | [03](openclaw/03-orchestrator.md) | [03](claudecode/03-orchestrator.md) |
+| 会话状态 | [04](deer-flow/04-state.md) | [04](hermes-agent/04-state.md) | [04](openclaw/04-state.md) | [04](claudecode/04-state.md) |
+| 上下文 | [05](deer-flow/05-context.md) | [05](hermes-agent/05-context.md) | [05](openclaw/05-context.md) | [05](claudecode/05-context.md) |
+| 记忆 | [06](deer-flow/06-memory.md) | [06](hermes-agent/06-memory.md) | [06](openclaw/06-memory.md) | [06](claudecode/06-memory.md) |
+| 工具 | [07](deer-flow/07-tools.md) | [07](hermes-agent/07-tools.md) | [07](openclaw/07-tools.md) | [07](claudecode/07-tools.md) |
+| 执行运行时 | [08](deer-flow/08-runtime.md) | [08](hermes-agent/08-runtime.md) | [08](openclaw/08-runtime.md) | [08](claudecode/08-runtime.md) |
+| 权限治理 | [09](deer-flow/09-guardrails.md) | [09](hermes-agent/09-guardrails.md) | [09](openclaw/09-guardrails.md) | [09](claudecode/09-guardrails.md) |
+| 可观测性 | [10](deer-flow/10-observability.md) | [10](hermes-agent/10-observability.md) | [10](openclaw/10-observability.md) | [10](claudecode/10-observability.md) |
 
 若已对某个项目有整体印象，也可直接阅读 [summary.md](summary.md) 获取各项目的适用场景与设计哲学总结。
