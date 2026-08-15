@@ -1,0 +1,72 @@
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { check } from "@tauri-apps/plugin-updater";
+import { Layout } from "./components/layout/Layout";
+import { UpdateChecker } from "./components/UpdateChecker";
+import { DashboardPage } from "./pages/DashboardPage";
+import { ChannelsPage } from "./pages/ChannelsPage";
+import { AuthChannelsPage } from "./pages/AuthChannelsPage";
+import { ApiKeysPage } from "./pages/ApiKeysPage";
+import { LogsPage } from "./pages/LogsPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { UsagePage } from "./pages/UsagePage";
+import { KnowledgeBasePage } from "./pages/KnowledgeBasePage";
+import { settingsApi } from "./lib/api";
+
+function App() {
+  const [showUpdater, setShowUpdater] = useState(false);
+  // 全局:是否有新版本可用(用户点"稍后"后仍保留,用于侧边栏红点提示)
+  const [hasUpdate, setHasUpdate] = useState(false);
+
+  useEffect(() => {
+    settingsApi.get().then((settings) => {
+      document.documentElement.setAttribute("data-theme", settings.ui_theme || "dark");
+      document.documentElement.lang = settings.ui_language || "zh-CN";
+    }).catch(() => {});
+
+    // 启动 5 秒后静默检查更新,发现新版本标记 hasUpdate + 弹窗
+    const timer = setTimeout(() => {
+      check()
+        .then((update) => {
+          if (update) {
+            setHasUpdate(true);
+            setShowUpdater(true);
+          }
+        })
+        .catch(() => {
+          // 检查失败(网络问题/无 release)时静默忽略,不影响使用
+        });
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <Layout hasUpdate={hasUpdate} onCheckUpdate={() => setShowUpdater(true)}>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/usage" element={<UsagePage />} />
+          <Route path="/channels" element={<ChannelsPage />} />
+          <Route path="/channels/auth" element={<AuthChannelsPage />} />
+          <Route path="/api-keys" element={<ApiKeysPage />} />
+          <Route path="/logs" element={<LogsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/services" element={<KnowledgeBasePage />} />
+          <Route path="/services/knowledge-base" element={<KnowledgeBasePage />} />
+          <Route path="/services/mcp" element={<KnowledgeBasePage />} />
+          <Route path="/services/wiki" element={<KnowledgeBasePage />} />
+          <Route path="/services/skills" element={<KnowledgeBasePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+      {showUpdater && (
+        <UpdateChecker
+          onClose={() => setShowUpdater(false)}
+          onUpdateStarted={() => setHasUpdate(false)}
+        />
+      )}
+    </BrowserRouter>
+  );
+}
+
+export default App;

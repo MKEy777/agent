@@ -338,3 +338,5 @@ client_secret_*.json
 **/*.js
 !**/*.config.js
 !**/*.config.mjs
+
+.env
