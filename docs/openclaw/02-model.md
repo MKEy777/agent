@@ -11,7 +11,7 @@
 
 openclaw 有 Python 和 TypeScript 两种实现，面对这个问题给出了规模差异巨大但思路一致的答案：
 
-| 维度 | Python 版 (openclaw-python) | TypeScript 版 (openclaw-2026.7.1) |
+| 维度 | Python 版 (openclaw-python) | TypeScript 版 (openclaw，分析基于 2026.7.1 版) |
 |------|---------------------------|----------------------------------|
 | 定位 | 本地 AI Gateway，4 个供应商 | 全栈个人 AI 助理，140+ 扩展 |
 | Provider 抽象 | 鸭子类型协议 | 插件声明文件 + 注册钩子 |

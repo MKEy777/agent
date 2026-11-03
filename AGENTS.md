@@ -31,7 +31,7 @@
 
 选定一个模块后，根据文档类型选择研究方式：
 
-**横向对比文档**（`docs/comparisons/`）：用子代理并行读四个项目。每个子代理负责一个项目，读取 AGENTS.md 找到关键文件，然后读核心实现 + 周边文件，返回该项目的写作计划。四个项目同时读，而不是逐个看完再读下一个。注意 openclaw 有 Python 和 TS 两种实现，openclaw-python 的 AGENTS.md 和 openclaw-2026.7.1 的 AGENTS.md 都需要读，子代理提示词中明确要求同时覆盖两份 AGENTS.md。
+**横向对比文档**（`docs/comparisons/`）：用子代理并行读四个项目。每个子代理负责一个项目，读取 AGENTS.md 找到关键文件，然后读核心实现 + 周边文件，返回该项目的写作计划。四个项目同时读，而不是逐个看完再读下一个。注意 openclaw 有 Python 和 TS 两种实现，openclaw-python 的 AGENTS.md 和 openclaw 的 AGENTS.md 都需要读，子代理提示词中明确要求同时覆盖两份 AGENTS.md。
 
 **项目深入文档**（`docs/{project}/`）：只读一个项目，但要用子代理把该项目该模块的周边文件也覆盖到。例如研究 deer-flow 的 Agent 主循环，子代理分别读 harness 层、中间件链、TUI 层，确保不遗漏相邻子系统的依赖。
 
@@ -307,7 +307,7 @@ AGENTS/
 ├── deer-flow/             # 原始项目
 ├── hermes-agent/          # 原始项目
 ├── openclaw-python/       # 原始项目（Python 版）
-├── openclaw-2026.7.1/     # 原始项目（TS 版）
+├── openclaw/              # 原始项目（TS 版）
 ├── claudecode/            # 原始项目
 ├── token-optimizer/       # token 分析工具
 ├── docs/
@@ -338,7 +338,7 @@ AGENTS/
 - deer-flow 有中文文档，但代码注释多语言混杂
 - hermes-agent 的 AGENTS.md 非常长（~1700 行），要读但不要被带偏——任务是**对比**，不是复述
 - openclaw-ts 的 `.agents/skills/` 里是 agent 操作技能（如 autoreview），不是用户技能；用户技能在 `skills/` 下
-- openclaw-python 和 openclaw-2026.7.1 是同一项目的两种实现（Python + TS），对比时可作为一个参照组
+- openclaw-python 和 openclaw 是同一项目的两种实现（Python + TS），对比时可作为一个参照组
 - deer-flow 的 `backend/packages/harness/` 是核心框架，`backend/app/` 是应用层
 - hermes-agent 的单文件 `run_agent.py`（~12k LOC）是核心，大但值得精读关键段落
 - claudecode 的 `core/query_loop.py` 是 CC 状态机核心，与其他项目对比价值很高
