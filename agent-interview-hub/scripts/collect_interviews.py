@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -105,15 +106,32 @@ class Candidate:
     topics: list[str] = field(default_factory=list)
     summary: str = ""
     raw_query: str | None = None
+    review_status: str | None = None
 
 
 def run_command(args: list[str], timeout: int = 60) -> str:
+    # Windows cannot launch npm's .cmd shims directly with subprocess.
+    # Resolve the package's declared entry point and invoke Node without a shell.
+    npm_packages = {"mcporter": "mcporter", "opencli": "@jackwener/opencli"}
+    if os.name == "nt" and args[0] in npm_packages:
+        shim = shutil.which(args[0])
+        if shim and Path(shim).suffix.lower() == ".cmd":
+            package = Path(shim).parent / "node_modules" / npm_packages[args[0]]
+            try:
+                manifest = json.loads((package / "package.json").read_text(encoding="utf-8"))
+                binary = manifest["bin"]
+                entry = binary[args[0]] if isinstance(binary, dict) else binary
+                args = ["node", str(package / entry), *args[1:]]
+            except (OSError, ValueError, KeyError, TypeError):
+                raise RuntimeError(f"Cannot resolve npm executable: {args[0]}") from None
     try:
         result = subprocess.run(
             args,
             check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
         )
     except FileNotFoundError:
@@ -214,7 +232,7 @@ def make_candidate(
     source_lookup = None
     if platform == "小红书":
         if source_url:
-            match = re.search(r"/search_result/([^?/#]+)", source_url)
+            match = re.search(r"/(?:search_result|explore)/([0-9a-f]{24})(?:[?/#]|$)", source_url, re.I)
             if match:
                 source_note_id = match.group(1)
         source_lookup = f"小红书站内搜索原标题：{title}"
@@ -271,6 +289,30 @@ def parse_exa_output(output: str, raw_query: str) -> list[Candidate]:
 
 def parse_xiaohongshu_output(output: str, raw_query: str) -> list[Candidate]:
     candidates: list[Candidate] = []
+    # Recent OpenCLI releases wrap structured output in an ok/data envelope.
+    if output.lstrip().startswith(("{", "[")):
+        try:
+            payload = json.loads(output)
+        except json.JSONDecodeError:
+            pass  # Keep compatibility with the older line-based YAML format.
+        else:
+            rows = payload.get("data", []) if isinstance(payload, dict) else payload
+            if isinstance(payload, dict) and payload.get("ok") is False:
+                raise RuntimeError(f"Xiaohongshu search failed: {payload.get('error')}")
+            if not isinstance(rows, list):
+                raise RuntimeError("Unexpected Xiaohongshu result envelope")
+            for row in rows:
+                if not isinstance(row, dict) or not row.get("title"):
+                    continue
+                url = row.get("url") or ""
+                if urllib.parse.urlparse(url).hostname not in {"www.xiaohongshu.com", "xiaohongshu.com"}:
+                    continue
+                candidates.append(make_candidate(
+                    platform="小红书", title=row["title"], source_url=url,
+                    summary=f"站内搜索结果候选；作者：{row.get('author', '未标注')}。尚未核对正文。",
+                    published_at=row.get("published_at"), raw_query=raw_query,
+                ))
+            return candidates
     current: dict[str, str] | None = None
     pending_key: str | None = None
     rank_count = 0
@@ -333,12 +375,27 @@ def parse_xiaohongshu_output(output: str, raw_query: str) -> list[Candidate]:
 
 def search_exa(query: str, limit: int) -> list[Candidate]:
     query_literal = json.dumps(query, ensure_ascii=False)
-    command = f"exa.web_search_exa(query: {query_literal}, numResults: {limit})"
+    objective = json.dumps("Find public interview experiences and original posts relevant to the query.")
+    command = f"exa.web_search_exa(query: {query_literal}, numResults: {limit}, objective: {objective})"
     output = run_command(["mcporter", "call", command], timeout=90)
     return parse_exa_output(output, query)
 
 
-def search_xiaohongshu(query: str) -> list[Candidate]:
+def search_xiaohongshu(query: str, visible: bool = False) -> list[Candidate]:
+    if visible:
+        shim = shutil.which("opencli")
+        if not shim:
+            raise RuntimeError("Missing command: opencli")
+        if Path(shim).suffix.lower() == ".cmd":
+            package = Path(shim).parent / "node_modules" / "@jackwener" / "opencli"
+            manifest = json.loads((package / "package.json").read_text(encoding="utf-8"))
+            main = package / manifest["bin"]["opencli"]
+        else:
+            main = Path(shim).resolve()
+        output = run_command([
+            "node", str(ROOT / "scripts" / "opencli_xhs_visible_search.mjs"), str(main), query,
+        ], timeout=150)
+        return parse_xiaohongshu_output(output, query)
     output = run_command(
         ["opencli", "xiaohongshu", "search", query, "-f", "yaml", "--window", "background"],
         timeout=120,
@@ -575,7 +632,7 @@ def command_search(args: argparse.Namespace) -> int:
         try:
             print(f"searching {platform}: {query}", file=sys.stderr)
             if platform == "xiaohongshu":
-                new_candidates.extend(search_xiaohongshu(query))
+                new_candidates.extend(search_xiaohongshu(query, visible=args.xiaohongshu_visible))
             elif platform == "github":
                 new_candidates.extend(search_github(query, args.limit))
             else:
@@ -638,6 +695,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub_search.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     sub_search.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     sub_search.add_argument("--append", action="store_true", help="Append to existing output before dedupe")
+    sub_search.add_argument("--xiaohongshu-visible", action="store_true", help="Search XHS through a visible normal browser window and native input")
     sub_search.set_defaults(func=command_search)
 
     sub_rss = sub.add_parser("rss", help="Collect candidates from RSS/Atom feeds")

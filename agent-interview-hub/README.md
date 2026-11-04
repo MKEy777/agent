@@ -244,6 +244,20 @@ python3 scripts/collect_interviews.py search \
   --append
 ```
 
+如果小红书新版 AI 搜索页面报 `search_input_not_available`，或后台窗口导致结果卡片布局折叠，可改用可见窗口模式。它通过 OpenCLI 创建普通浏览器窗口，识别当前可见的搜索框，使用原生输入和回车搜索，结束后释放并关闭本次创建的窗口。请让窗口保持显示，遇到登录或验证提示时先在浏览器中处理。
+
+```bash
+python3 scripts/collect_interviews.py search \
+  --platform xiaohongshu \
+  --query "小红书产品工程师面经" \
+  --xiaohongshu-visible \
+  --output data/xiaohongshu_pe_candidates.json \
+  --report data/xiaohongshu_pe_candidates.md \
+  --append
+```
+
+Windows 的 CMD 可将上述命令写为一行，并使用 `python`；PowerShell 如果阻止运行 `opencli.ps1`，手动检查浏览器连接时可用 `opencli.cmd doctor`。采集脚本会直接调用 npm 包入口。小红书候选保存原标题和 note id，公开索引不保存带签名参数的搜索直链。
+
 ### 推荐阅读顺序
 
 1. 📖 先看 [学习路线图](Agent工程师学习路线图.md)，了解全局
