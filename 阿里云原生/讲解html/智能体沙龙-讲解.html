@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能体构建与进化 · Agent 开源开发者沙龙 — 讲解</title>
+<style>
+:root {
+  --text: #1f2329;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #ff6a00;
+  --accent-soft: #fff4eb;
+  --bg: #ffffff;
+  --bg-soft: #f9fafb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.8;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.topbar-inner {
+  max-width: 1080px; margin: 0 auto; padding: 10px 16px 0;
+}
+.event-title {
+  font-size: 14px; color: var(--muted); margin: 0 0 8px;
+}
+.tabs { display: flex; gap: 6px; overflow-x: auto; }
+.tab-btn {
+  flex: 0 0 auto;
+  border: 1px solid var(--border); border-bottom: none;
+  background: var(--bg-soft); color: var(--text);
+  padding: 8px 14px; border-radius: 8px 8px 0 0;
+  font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.tab-btn .num {
+  display: inline-block; min-width: 20px; text-align: center;
+  background: var(--border); border-radius: 4px;
+  font-size: 12px; margin-right: 6px; padding: 0 4px;
+}
+.tab-btn.active {
+  background: var(--accent-soft); border-color: var(--accent);
+  color: var(--accent); font-weight: 600;
+}
+.tab-btn.active .num { background: var(--accent); color: #fff; }
+main { max-width: 960px; margin: 0 auto; padding: 32px 24px 96px; }
+.report-panel { display: none; }
+.report-panel.active { display: block; }
+.report-head h1 { font-size: 28px; margin: 0 0 8px; line-height: 1.4; }
+.report-head .meta { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+h2 { font-size: 21px; margin: 40px 0 12px; }
+h3 { font-size: 16px; margin: 20px 0 8px; }
+p { margin: 10px 0; }
+a { color: #0369a1; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.overview {
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 24px 16px; margin-top: 8px;
+}
+.overview h2 { margin-top: 16px; }
+.page-toc {
+  border: 1px solid var(--border); border-radius: 10px;
+  margin: 20px 0; padding: 10px 20px; background: var(--bg);
+}
+.page-toc summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.page-toc ol { margin: 10px 0; padding-left: 22px; columns: 2; column-gap: 40px; }
+.page-toc li { font-size: 14px; margin: 4px 0; break-inside: avoid; }
+.slide {
+  border-top: 1px solid var(--border);
+  margin-top: 36px; padding-top: 8px;
+}
+.slide h2 { margin-top: 12px; }
+.pageno {
+  display: inline-block; font-size: 13px; font-weight: 600;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 6px; padding: 2px 10px; margin-right: 10px;
+  vertical-align: middle;
+}
+.slide figure { margin: 14px 0; }
+.slide figure img {
+  width: 100%; height: auto;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-soft);
+}
+.explain { font-size: 16px; }
+.explain ul, .explain ol { padding-left: 24px; }
+.explain li { margin: 6px 0; }
+.background {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 4px 18px 10px; margin: 16px 0;
+  font-size: 14.5px;
+}
+.background h3 { margin: 10px 0 4px; font-size: 14px; color: var(--accent); }
+.takeaways ul { padding-left: 24px; }
+.takeaways li { margin: 8px 0; }
+.refs ul { padding-left: 24px; font-size: 14.5px; }
+.refs li { margin: 6px 0; }
+strong { font-weight: 600; }
+@media (max-width: 640px) {
+  main { padding: 20px 14px 64px; }
+  .report-head h1 { font-size: 23px; }
+  .page-toc ol { columns: 1; }
+  .tab-btn { font-size: 13px; padding: 7px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <p class="event-title">智能体构建与进化 · Agent 开源开发者沙龙（阿里云）— 逐页讲解 · 共 5 个报告 / 103 页</p>
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn" data-report="1"><span class="num">1</span>MCP 无状态与 Higress</button>
+      <button class="tab-btn" data-report="2"><span class="num">2</span>AgentScope 2.0 Harness</button>
+      <button class="tab-btn" data-report="3"><span class="num">3</span>RocketMQ LiteTopic</button>
+      <button class="tab-btn" data-report="4"><span class="num">4</span>LoongSuite Pilot</button>
+      <button class="tab-btn" data-report="5"><span class="num">5</span>AgentTeams 数字员工</button>
+    </nav>
+  </div>
+</div>
+<main>
+<div class="report-panel" id="report-1">
+  <header class="report-head">
+    <h1>MCP 进入无状态时代：重构 Agent 的工具基础设施</h1>
+    <p class="meta">讲师：孙校（Higress 社区 Member） · 智能体构建与进化——Agent 开源开发者沙龙 · 原 PDF 第 1–17 页，共 17 页</p>
+  </header>
+
+  <section class="overview">
+    <h2>全局理解：这个报告在讲什么</h2>
+    <p>这个报告回答一个问题：当 MCP（Model Context Protocol，Agent 调用工具的标准协议）演进到无状态形态后，企业该怎么重建 Agent 的工具访问基础设施。讲师孙校来自 Higress 社区，内容分三章：第一章回顾 MCP 从本地 stdio、HTTP+SSE、Streamable HTTP 到 2026-07 Stateless Core 的四阶段演进，论证无状态让工具具备可调度、可识别、可治理三种基础设施属性；第二章把 Higress 定位为 Agent 与工具运行时之间的 Tool Access Plane（工具访问平面），用协议桥、REST-to-MCP、凭证隔离与 Tool 策略逐一消除协议升级、工具接入、执行治理三道摩擦；第三章展望从 MCP Gateway 演进到 Agent Gateway，把外界访问 Agent、Agent 访问模型、Agent 访问工具、Agent 间协作四类访问纳入同一个治理边界。官方沙龙回顾对本议题的摘要与此一致：Higress 提供协议桥接、REST-to-MCP 统一工具目录、凭证隔离与工具策略治理，未来把模型访问与 A2A 协作纳入统一治理（见<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">沙龙回顾</a>）；2026-07-28 新规范与 Higress 支持边界的细节见<a href="https://developer.aliyun.com/article/1758162" target="_blank" rel="noopener">新规范解读</a>。</p>
+  </section>
+
+  <details class="page-toc">
+    <summary>逐页目录（点击跳转）</summary>
+    <ol>
+      <li><a href="#r1-p1">第 1 页 · 标题页</a></li>
+      <li><a href="#r1-p2">第 2 页 · 目录</a></li>
+      <li><a href="#r1-p3">第 3 页 · 章节分隔：01 MCP 进入无状态时代</a></li>
+      <li><a href="#r1-p4">第 4 页 · MCP 一直在摆脱连接状态</a></li>
+      <li><a href="#r1-p5">第 5 页 · 无状态让 Tool 具备三种基础设施属性</a></li>
+      <li><a href="#r1-p6">第 6 页 · Agent 负责意图，基础设施守住边界</a></li>
+      <li><a href="#r1-p7">第 7 页 · 网关真正理解 MCP，才有资格治理 Tool</a></li>
+      <li><a href="#r1-p8">第 8 页 · 章节分隔：02 Higress：Agent 的 Tool Access Plane</a></li>
+      <li><a href="#r1-p9">第 9 页 · Higress：面向 AI 时代的云原生网关</a></li>
+      <li><a href="#r1-p10">第 10 页 · 企业 Agent 上线，通常先卡在三道门</a></li>
+      <li><a href="#r1-p11">第 11 页 · 新 Client 不等全链路升级，也能调用旧 Server</a></li>
+      <li><a href="#r1-p12">第 12 页 · 存量系统不改造，也能进入统一 Tool 目录</a></li>
+      <li><a href="#r1-p13">第 13 页 · Skill + CLI 能执行，企业仍需 Tool 治理边界</a></li>
+      <li><a href="#r1-p14">第 14 页 · 章节分隔：03 Higress 的未来：从 MCP Gateway 到 Agent Gateway</a></li>
+      <li><a href="#r1-p15">第 15 页 · MCP Gateway 只覆盖了 Agent 的一条访问链</a></li>
+      <li><a href="#r1-p16">第 16 页 · Higress Agent Gateway：目标形态与能力演进</a></li>
+      <li><a href="#r1-p17">第 17 页 · 结尾：社区参与与二维码</a></li>
+    </ol>
+  </details>
+
+  <section class="slide" id="r1-p1">
+    <h2><span class="pageno">第 1 页</span>标题页</h2>
+    <figure><img src="assets/p001.png" alt="第 1 页：标题页" loading="lazy"></figure>
+    <div class="explain">
+      <p>开场标题页：报告题目《MCP 进入无状态时代：重构 Agent 的工具基础设施》，讲师孙校，来自 Higress 社区，页面带阿里云标识。标题即全报告主张：MCP 协议的无状态化演进，会改变 Agent 工具基础设施的建设方式。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p2">
+    <h2><span class="pageno">第 2 页</span>目录</h2>
+    <figure><img src="assets/p002.png" alt="第 2 页：目录" loading="lazy"></figure>
+    <div class="explain">
+      <p>目录页列出三个章节：01 MCP 进入无状态时代；02 Higress：Agent 的 Tool Access Plane；03 Higress 的未来：从 MCP Gateway 到 Agent Gateway。结构是"协议趋势 → 当前落地 → 未来演进"三段式。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p3">
+    <h2><span class="pageno">第 3 页</span>章节分隔：01 MCP 进入无状态时代</h2>
+    <figure><img src="assets/p003.png" alt="第 3 页：章节分隔页，01 MCP 进入无状态时代" loading="lazy"></figure>
+    <div class="explain">
+      <p>第一章分隔页，深蓝底只有一行标题"01 MCP 进入无状态时代"，标志进入协议演进部分的讨论，对应后面第 4–7 页。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p4">
+    <h2><span class="pageno">第 4 页</span>MCP 一直在摆脱连接状态</h2>
+    <figure><img src="assets/p004.png" alt="第 4 页：MCP 一直在摆脱连接状态" loading="lazy"></figure>
+    <div class="explain">
+      <p>左半把 MCP 传输形态的历史演进排成四级台阶：最初是本地 stdio（标准输入输出，进程间通过本地管道通信），Agent 与工具运行在同一环境；2024-11 的 HTTP + SSE（Server-Sent Events，服务器通过 HTTP 长连接向客户端单向推送消息）支持了远程访问，但依赖双向连接；2025-03 的 Streamable HTTP 统一了 Endpoint（访问入口地址），长连接变为可选；2026-07 的 Stateless Core 做到请求独立处理、上下文随请求传递。右半展开 2026-07-28 新规范"请求自描述"的三个特征：无握手 / 无 Session（Session 指服务端为一条连接维持的会话状态），server/discover 按需调用；上下文随请求，请求元数据放在 HTTP Header 中携带；任意实例可处理，tools/list（查询工具列表）与 tools/call（执行某个工具）独立调度。底部给出演进主线：工具调用逐步脱离特定连接，走向标准的远程请求。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>2026-07-28 发布的 MCP 规范核心变化是无状态核心：请求自描述、无握手无 Session、上下文随请求传递，因此可以跑在普通 HTTP 基础设施上。Higress v2.2.4 是首个支持该协议 Tools 基线的开源网关；注意边界——聚焦 Tools 基线，不等于实现规范的全部能力。来源：<a href="https://developer.aliyun.com/article/1758162" target="_blank" rel="noopener">MCP 新规范与 Higress 支持解读</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p5">
+    <h2><span class="pageno">第 5 页</span>无状态让 Tool 具备三种基础设施属性</h2>
+    <figure><img src="assets/p005.png" alt="第 5 页：无状态让 Tool 具备三种基础设施属性" loading="lazy"></figure>
+    <div class="explain">
+      <p>页首前提：Transport Session（传输层会话）退出协议核心，Tool 调用开始具备标准基础设施属性。接着用箭头串起三个递进的边界：01 状态边界——状态不再藏在连接里，业务状态需要通过合理设计显式表达；02 调度边界——任意请求可以落到任意健康实例，扩缩容与故障切换不再依赖粘性会话（粘性会话指负载均衡把同一会话的请求固定发往同一实例）；03 治理边界——治理对象从 /mcp Endpoint 下沉到 Method（协议调用方法）与具体 Tool。三者合成一个公式：可调度 + 可识别 + 可治理 = 标准 Tool Workload（可被基础设施统一调度的工作负载单元）。底部特别提醒：协议不会自动提供治理，但它让 Tool 具备了被共享基础设施治理的条件——治理本身仍要靠网关等设施去建设。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p6">
+    <h2><span class="pageno">第 6 页</span>Agent 负责意图，基础设施守住边界</h2>
+    <figure><img src="assets/p006.png" alt="第 6 页：Agent 负责意图，基础设施守住边界" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页是一张三层架构图。上层是三类调用方：业务 Agent、研发 Agent、个人 Agent，三条线汇聚到中间的 Tool Access Plane（工具访问平面，即 Agent 与工具之间的统一接入与治理层）。平面内列六项能力：发现与目录、协议与兼容、身份与权限、路由与弹性、策略与限流、观测与审计。平面下方再分出三类后端：MCP Tools、REST APIs（传统 HTTP 风格接口）、企业服务。底部结论划分了职责：Agent 决定调用什么工具（意图层），基础设施保证调用可达、可控、可观测（执行层）。这张图给出了全报告反复使用的 Tool Access Plane 概念的能力清单。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p7">
+    <h2><span class="pageno">第 7 页</span>网关真正理解 MCP，才有资格治理 Tool</h2>
+    <figure><img src="assets/p007.png" alt="第 7 页：网关真正理解 MCP，才有资格治理 Tool" loading="lazy"></figure>
+    <div class="explain">
+      <p>页首用乘法公式定义 MCP Gateway = 协议语义 × 兼容转换 × 工具治理，随后展开为三层能力。看得懂：识别 Version（协议版本）+ Method（调用方法）+ Tool Identity（工具身份），做协议识别与严格校验。接得住：在 Modern（新协议）/ Legacy（旧协议）/ REST 三种形态之间做明确转换，升级不要求全链路同时完成。管得好：身份 + 凭证 + 策略 + 观测组合起来，治理对象下沉到具体 Tool。底部结论：网关从单纯代理 /mcp 入口，走向理解协议版本、调用方法和 Tool 身份——做到这三点才谈得上治理工具。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p8">
+    <h2><span class="pageno">第 8 页</span>章节分隔：02 Higress：Agent 的 Tool Access Plane</h2>
+    <figure><img src="assets/p008.png" alt="第 8 页：章节分隔页，02 Higress：Agent 的 Tool Access Plane" loading="lazy"></figure>
+    <div class="explain">
+      <p>第二章分隔页，标题"02 Higress：Agent 的 Tool Access Plane"，从协议趋势转入 Higress 的具体落地，对应后面第 9–13 页。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p9">
+    <h2><span class="pageno">第 9 页</span>Higress：面向 AI 时代的云原生网关</h2>
+    <figure><img src="assets/p009.png" alt="第 9 页：Higress：面向 AI 时代的云原生网关" loading="lazy"></figure>
+    <div class="explain">
+      <p>左侧是 Higress 的定位卡片：AI Native API Gateway（AI 原生 API 网关），由云原生底座 × AI 流量治理 × MCP Server 托管组合而成，带 AI Gateway 与 MCP Gateway 两个能力标签，开源地址 github.com/higress-group/higress。上方两行给出管理范围与项目属性：统一管理 LLM API（大模型接口）、MCP Server 与传统 API；开源、CNCF Sandbox（CNCF 沙箱孵化阶段项目）、Apache 2.0 许可证、Wasm 可扩展（WebAssembly 插件扩展机制）。右侧三行展开：01 统一接入——LLM API、MCP Server、REST / 企业服务从同一层进入；02 统一治理——路由与弹性、认证鉴权、限流、观测审计；03 开放底座——Istio + Envoy、Wasm 插件、Kubernetes / Gateway API。底部蓝条落到报告主题：在 Agent 与 Tool Runtime（工具运行时）之间，提供一层可统一管理的 Tool Access Plane。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>Higress 是开源 AI 原生 API 网关，核心基于 Istio/Envoy，为 CNCF Sandbox 项目、Apache 2.0 许可，通过 Wasm 插件扩展能力，统一管理 LLM API、MCP Server 与传统 API。项目入口：<a href="https://github.com/higress-group/higress" target="_blank" rel="noopener">GitHub 仓库</a>、<a href="https://higress.ai" target="_blank" rel="noopener">官网 higress.ai</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p10">
+    <h2><span class="pageno">第 10 页</span>企业 Agent 上线，通常先卡在三道门</h2>
+    <figure><img src="assets/p010.png" alt="第 10 页：企业 Agent 上线，通常先卡在三道门" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页把企业 AI 平台团队的上线之路画成上升阶梯。起点是团队目标：让业务 Agent 调用现有系统并进入生产。随后依次三道门：01 协议升级——Client 已升级、Server 仍依赖旧生命周期；02 工具接入——REST、OpenAPI（REST 接口的描述规范）与 MCP Server 形态和入口各不相同；03 执行治理——凭证、权限、审计分散。右上角标出总目标：可规模化上线。底部蓝条给出三条验收标准：工具可用、升级可控、调用可追踪；最后一行点出 Higress 的角色：逐一消除协议、接入与治理摩擦。后面第 11–13 页分别对应这三道摩擦的解法。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p11">
+    <h2><span class="pageno">第 11 页</span>新 Client 不等全链路升级，也能调用旧 Server</h2>
+    <figure><img src="assets/p011.png" alt="第 11 页：新 Client 不等全链路升级，也能调用旧 Server" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页是一条从左到右的调用链，解决第 10 页的"协议升级"门。调用侧是 2026-07-28 的新 Client，发出自描述 tools/call：无握手、无 Session，版本与 Tool 身份随请求携带。中间 Higress 协议桥分三步处理：01 识别校验——核对版本、方法、Tool 身份；02 显式转换——按配置的 protocolStrategy 为 legacy 把新协议请求转成旧协议调用，即后端走旧协议是显式声明的，不是网关猜的；03 调用安全——两条纪律：不猜版本、不跨协议重试（失败后不换一种协议重发，避免同一次调用被执行两遍）。右侧后端是 Legacy MCP Server，仍跑旧生命周期：initialize 握手、Session 维持，传输为 SSE / Streamable HTTP。底部三句话总结效果：客户端先升级、服务端渐进迁移、一次调用只执行一次。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p12">
+    <h2><span class="pageno">第 12 页</span>存量系统不改造，也能进入统一 Tool 目录</h2>
+    <figure><img src="assets/p012.png" alt="第 12 页：存量系统不改造，也能进入统一 Tool 目录" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页解决"工具接入"门。图自上而下：Agent 统一用 tools/list 与 tools/call 访问企业 Tool 目录（标准 Tool 描述、统一入口、统一发现）；目录由 Higress 内两条转换路径支撑。左路 REST-to-MCP：把 API Path 映射为 Tool、Parameter 映射为 Args（工具参数），将 REST / OpenAPI / Database 等存量资产转成 MCP 工具；右路 MCP Proxy：代理已有 MCP Server，提供统一稳定的 /mcp 入口。两条路径共用同一条治理横条：统一入口、身份与凭证、Tool 策略、观测审计。图下方强调企业存量资产保持原状，后端不做改造。结论：后端保持原状，Agent 获得统一 Tool 语义。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p13">
+    <h2><span class="pageno">第 13 页</span>Skill + CLI 能执行，企业仍需 Tool 治理边界</h2>
+    <figure><img src="assets/p013.png" alt="第 13 页：Skill + CLI 能执行，企业仍需 Tool 治理边界" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页解决"执行治理"门，左右对照两条执行路径：直接执行（Skill → Shell / CLI → 企业系统）与受控执行（Skill → MCP Tool → Higress → 企业系统）。这里的 Skill 指封装"怎么做某件事"的操作技能，CLI 即命令行工具。页首前提：能运行命令，不等于可以安全共享给多个 Agent。三组对照如下：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">维度</th>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">直接执行的问题</th>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">受控执行的对策</th>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">01 权限与身份</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Shell 权限过宽，业务动作与运行环境没有分离</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">调用侧身份：识别 Agent、用户与租户</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">02 凭证</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Token 与版本散落，难以统一吊销、轮换和升级</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">凭证隔离：Client Token 与后端 Credential 分离</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">03 审计</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">命令字符串审计，缺少业务 Tool 语义</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Tool 策略与观测：白名单、限流、指标、Trace（分布式调用链追踪）、审计</td>
+        </tr>
+      </table>
+      <p>绿色横条给出审计答案的四要素：谁、调用哪个 Tool、使用哪份凭证、执行结果。底部分工结论：Skill 决定怎么做，MCP 定义能做什么，Higress 守住谁能做、如何执行。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p14">
+    <h2><span class="pageno">第 14 页</span>章节分隔：03 Higress 的未来：从 MCP Gateway 到 Agent Gateway</h2>
+    <figure><img src="assets/p014.png" alt="第 14 页：章节分隔页，03 Higress 的未来：从 MCP Gateway 到 Agent Gateway" loading="lazy"></figure>
+    <div class="explain">
+      <p>第三章分隔页，标题"03 Higress 的未来：从 MCP Gateway 到 Agent Gateway"，转入演进方向讨论，对应后面第 15–16 页。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p15">
+    <h2><span class="pageno">第 15 页</span>MCP Gateway 只覆盖了 Agent 的一条访问链</h2>
+    <figure><img src="assets/p015.png" alt="第 15 页：MCP Gateway 只覆盖了 Agent 的一条访问链" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用一张图划出 MCP Gateway 的覆盖边界。大框是"Agent Gateway 的完整治理范围"，中心为 Agent Runtime（承载意图、规划、Memory、State），四周连出四条访问链：右侧蓝色实线椭圆是"Agent 访问工具"，标注 MCP Gateway 已覆盖；其余三条均为虚线，即需要统一治理——上方"外界访问 Agent"（User / App / External Agent → Agent API）、左侧"Agent 访问模型"、下方"Agent 与 Agent 协作"（A2A · Agent Card · Skill · Task）。图例说明：虚线 = 需要统一治理，蓝色 = MCP 已覆盖。其中 A2A 是 Agent 间协作协议，与管工具调用的 MCP 互补。底部结论：问题不是增加三套网关，而是把四类访问纳入同一个治理边界。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>A2A（Agent-to-Agent）是 Google 于 2025 年 4 月发布的 Agent 间协作协议，与 MCP 互补：MCP 管 Agent 到工具的调用，A2A 管 Agent 之间的通信，核心概念包括 Agent Card（Agent 的能力自描述）与 Task（协作任务）。官方沙龙回顾也把 Agent 间协作（A2A）列为 Higress 演进到 Agent Gateway 后要统一治理的访问类型之一。来源：<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">Agent 开源开发者沙龙回顾</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p16">
+    <h2><span class="pageno">第 16 页</span>Higress Agent Gateway：目标形态与能力演进</h2>
+    <figure><img src="assets/p016.png" alt="第 16 页：Higress Agent Gateway：目标形态与能力演进" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出 Agent Gateway 的目标形态，并用两种颜色标注能力状态：蓝色 = 已具备，紫色 = 待实现。顶部先划边界：Agent Runtime（Planner、Memory、State）保持在 Agent 侧，业务状态属于 Agent，网关不接管。Higress 能力边界框内，中心 Higress Agent Gateway 连接四个方向，每个方向都是"已有底座 + 待补语义"两层：Agent 服务入口——已具备网关入口、Streaming（流式响应）、认证底座，待实现 Agent API、身份、服务发现；模型访问——已具备模型路由、Fallback（主模型不可用时自动切换备用模型）、Token / 配额治理，待实现 Agent 级成本与策略语义；工具访问——已具备 MCP Gateway、REST-to-MCP、凭证隔离、Tool 策略 / 审计，待实现工具生命周期治理；Agent 间协作——已具备路由、安全、观测底座，待实现 A2A、Agent Card、Skill、Task。底部通用网关能力同样分两层：已具备身份、路由、限流、观测、审计；待实现 Agent 身份、策略、调用链、成本语义。结论：Agent Runtime 保持在 Agent 侧，Higress 在 AI Gateway 与 MCP Gateway 之上补齐统一访问、治理与协作能力。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方沙龙回顾将这一演进方向概括为：从 MCP Gateway 演进为 Agent Gateway，把 Agent 访问模型、工具访问、Agent 间协作（A2A）纳入统一治理。来源：<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">Agent 开源开发者沙龙回顾</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r1-p17">
+    <h2><span class="pageno">第 17 页</span>结尾：社区参与与二维码</h2>
+    <figure><img src="assets/p017.png" alt="第 17 页：结尾页，社区二维码与参与方式" loading="lazy"></figure>
+    <div class="explain">
+      <p>结尾页承担社区引流作用：中间是"Higress 社区交流 14 群"的微信群二维码，标注二维码有效期至 8 月 25 日；下方给出仓库地址 github.com/higress-group/higress 与参与方式：Samples（示例）、Conformance（一致性测试）、Issue（问题反馈）、PR（提交代码贡献）；页底为阿里云品牌 slogan"计算，为了无法计算的价值"。</p>
+    </div>
+  </section>
+
+  <section class="takeaways">
+    <h2>要点回顾</h2>
+    <ul>
+      <li>MCP 的演进主线是摆脱连接状态：2026-07-28 新规范做到请求自描述、无握手无 Session、上下文随请求传递，任意健康实例都能处理任意请求。</li>
+      <li>无状态不会自动带来治理，但让 Tool 可调度、可识别、可治理，治理对象从 /mcp 入口下沉到 Method 与具体 Tool，工具由此成为标准 Tool Workload。</li>
+      <li>Higress 的定位是 Agent 与工具运行时之间的 Tool Access Plane：协议桥让新 Client 直接调用旧 Server（一次调用只执行一次），REST-to-MCP 与 MCP Proxy 让存量系统不改造进入统一 Tool 目录。</li>
+      <li>Skill + CLI 能执行命令不等于能安全共享给多个 Agent；企业需要调用侧身份、凭证隔离、Tool 级策略与审计，审计要能回答"谁、调用哪个 Tool、用哪份凭证、结果如何"。</li>
+      <li>未来方向是 Agent Gateway：不是叠加三套网关，而是把外界访问 Agent、访问模型、访问工具、Agent 间协作四类访问纳入同一治理边界；Agent Runtime 与业务状态仍留在 Agent 侧。</li>
+    </ul>
+  </section>
+
+  <section class="refs">
+    <h2>参考资料</h2>
+    <ul>
+      <li><a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">智能体构建与进化——Agent 开源开发者沙龙回顾</a> — 官方对本议题的摘要：协议演进、Tool Access Plane 与 Agent Gateway 方向。</li>
+      <li><a href="https://developer.aliyun.com/article/1758162" target="_blank" rel="noopener">MCP 2026-07-28 新规范与 Higress 支持解读</a> — 无状态核心、请求自描述，以及 Higress v2.2.4 支持 Tools 基线的边界说明。</li>
+      <li><a href="https://github.com/higress-group/higress" target="_blank" rel="noopener">Higress GitHub 仓库</a> — 开源 AI 原生 API 网关代码与社区参与入口。</li>
+      <li><a href="https://higress.ai" target="_blank" rel="noopener">Higress 官网</a> — 项目文档与能力介绍。</li>
+    </ul>
+  </section>
+</div>
+<div class="report-panel" id="report-2">
+  <header class="report-head">
+    <h1>基于 AgentScope 2.0 Harness 构建企业级、分布式智能体</h1>
+    <p class="meta">讲师：刘军（AgentScope Core Maintainer） · 智能体构建与进化——Agent 开源开发者沙龙·上海站（2026-08-26） · 原 PDF 第 18–42 页，共 25 页</p>
+  </header>
+
+  <section class="overview">
+    <h2>全局理解：这个报告在讲什么</h2>
+    <p>这份报告回答一个问题：智能体从"演示能跑通"到"企业生产可用"，中间缺的那层工程能力由谁来补。讲师给出的答案是 AgentScope 2.0 内置的 Harness 工程化层——裸 ReActAgent（推理→工具调用→观察→再推理的循环）只解决"一次推理"，而 HarnessAgent 在其上封装了工作区（Workspace，作为智能体进化的 Source of Truth，即唯一可信来源）、上下文压缩四道防线、双层长期记忆、子智能体编排、沙箱隔离与快照恢复、Skills 四层注册中心、计划模式、Channel 统一接入等生产能力，最后由 AgentScope Service 提供企业级控制面。报告分三章：01 AgentScope 2.0 介绍，讲框架定位、ReActAgent 核心组件与 1.0→2.0 迁移；02 Harness 核心设计，逐项拆解上述工程机制，是全场篇幅最大的部分；03 AgentScope Service 企业级控制面，讲如何把不同框架、不同技术栈搭建的智能体统一管控与协作，并演示全托管与多 Agent 协作。背景上，AgentScope 是阿里巴巴开源的多语言智能体框架（Python、Java、TypeScript，Go 建设中），已在集团内十余条核心业务线生产使用（见<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">官方沙龙回顾</a>、<a href="https://java.agentscope.io/v2/zh/blogs/agentscope-v2-explained" target="_blank" rel="noopener">官方 2.0 解析</a>）。</p>
+  </section>
+
+  <details class="page-toc">
+    <summary>逐页目录（点击跳转）</summary>
+    <ol>
+      <li><a href="#r2-p18">第 18 页 · 标题页：基于 AgentScope 2.0 Harness 构建企业级、分布式智能体</a></li>
+      <li><a href="#r2-p19">第 19 页 · 目录</a></li>
+      <li><a href="#r2-p20">第 20 页 · 章节页：01 AgentScope 2.0 介绍</a></li>
+      <li><a href="#r2-p21">第 21 页 · AgentScope 概览</a></li>
+      <li><a href="#r2-p22">第 22 页 · ReActAgent 核心组件</a></li>
+      <li><a href="#r2-p23">第 23 页 · 1.0 → 2.0 迁移指南</a></li>
+      <li><a href="#r2-p24">第 24 页 · 章节页：02 AgentScope Harness 核心设计</a></li>
+      <li><a href="#r2-p25">第 25 页 · AgentScope Harness 总体架构</a></li>
+      <li><a href="#r2-p26">第 26 页 · AgentScope Harness 快速体验</a></li>
+      <li><a href="#r2-p27">第 27 页 · Workspace——智能体进化的 Source of Truth</a></li>
+      <li><a href="#r2-p28">第 28 页 · 抽象文件系统——Workspace 的物理载体</a></li>
+      <li><a href="#r2-p29">第 29 页 · 内置上下文压缩策略——四道防线</a></li>
+      <li><a href="#r2-p30">第 30 页 · 双层长期记忆——事实自动沉淀</a></li>
+      <li><a href="#r2-p31">第 31 页 · 子智能体编排、委派、并行、异步通知</a></li>
+      <li><a href="#r2-p32">第 32 页 · 沙箱管理：隔离、恢复与分布式</a></li>
+      <li><a href="#r2-p33">第 33 页 · Skills：四层注册中心与沙箱内执行</a></li>
+      <li><a href="#r2-p34">第 34 页 · 计划模式：想清楚→写下来→再动手</a></li>
+      <li><a href="#r2-p35">第 35 页 · Channel：消息平台→Gateway→Agent</a></li>
+      <li><a href="#r2-p36">第 36 页 · 章节页：03 AgentScope Service 企业级智能体控制面</a></li>
+      <li><a href="#r2-p37">第 37 页 · AgentScope Service 企业级智能体编排控制面</a></li>
+      <li><a href="#r2-p38">第 38 页 · 控制面与 Dashboard</a></li>
+      <li><a href="#r2-p39">第 39 页 · Managed Agents 实现 Harness 全托管</a></li>
+      <li><a href="#r2-p40">第 40 页 · 示例演示</a></li>
+      <li><a href="#r2-p41">第 41 页 · 实现多 Agent 协作</a></li>
+      <li><a href="#r2-p42">第 42 页 · 扫码加入钉钉群</a></li>
+    </ol>
+  </details>
+
+  <section class="slide" id="r2-p18">
+    <h2><span class="pageno">第 18 页</span>标题页：基于 AgentScope 2.0 Harness 构建企业级、分布式智能体</h2>
+    <figure><img src="assets/p018.png" alt="第 18 页：标题页" loading="lazy"></figure>
+    <div class="explain">
+      <p>报告标题页，阿里云模板背景，讲师署名刘军。标题里有两个关键词：一是"AgentScope 2.0 Harness"，点明本报告的主角不是裸框架而是 2.0 新增的工程化层；二是"企业级、分布式"，点明目标场景不是个人玩具，而是需要稳定运行、可管控、可横向扩展的生产环境。整场报告就是围绕"如何用 Harness 把智能体做到这两个标准"展开。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p19">
+    <h2><span class="pageno">第 19 页</span>目录</h2>
+    <figure><img src="assets/p019.png" alt="第 19 页：目录" loading="lazy"></figure>
+    <div class="explain">
+      <p>目录页列出三章：01 AgentScope 2.0 介绍、02 AgentScope Harness 核心设计、03 AgentScope Service 企业级智能体控制面。三章是递进关系：先认识框架本身，再深入单个智能体的工程化机制（Harness），最后上升到一群智能体的统一管控与协作（Service 控制面）。阅读时可以把它理解为"框架 → 单体工程化 → 集群治理"三层。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p20">
+    <h2><span class="pageno">第 20 页</span>章节页：01 AgentScope 2.0 介绍</h2>
+    <figure><img src="assets/p020.png" alt="第 20 页：章节分隔页" loading="lazy"></figure>
+    <div class="explain">
+      <p>第一章的章节分隔页，深蓝底白字，无正文内容。作用是提示听众进入"AgentScope 2.0 介绍"部分，接下来三页分别讲框架生态概览、ReActAgent 核心组件、以及从 1.0 到 2.0 的迁移指南。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p21">
+    <h2><span class="pageno">第 21 页</span>AgentScope 概览</h2>
+    <figure><img src="assets/p021.png" alt="第 21 页：AgentScope 概览与生态架构图" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页先用两句文字定调：AgentScope 是阿里巴巴推出的面向企业级、分布式场景的智能体开发框架，覆盖 Python、Java、TypeScript、Golang（建设中）四种语言实现；生态核心目标是提供覆盖"开发、部署、调优"全生命周期的生产级解决方案，让智能体应用开发更简单、运行更稳定、效果更卓越。随后用一张大生态图展示框架与周边系统的关系，可以分六层读：</p>
+      <ul>
+        <li><strong>中心蓝色区是 AgentScope 2.0 本体</strong>（带 Python/Java/TS 三个语言图标），内部又分七块：Agent Service 提供后台任务管理、会话管理、用户认证与授权、定时任务（Cron Job）管理、存储/DB 管理、Workspace 池；Event System 负责消息与事件、事件流式输出、Human-in-the-Loop（人工介入审批）；Agent Engine 是推理与行动核心，含 Reasoning、Permission System（权限系统）、Toolkit、Batch Acting（批量行动）；Workspace 支持本地文件系统、Docker、云沙箱三种载体；Model 层含 Chat Model、TTS/Realtime（语音/实时）、Retries（重试）、Fallback（降级兜底）；Context Management 含结构化压缩与 Context Offload（上下文卸载）；Agent Middleware 在 Reasoning、Acting、Reply、System Prompt 四个位置提供中间件挂点。</li>
+        <li><strong>上方粉色带是样例与应用层</strong>：AgentScope-Samples 给出 Data-Juicer Agent、Deep Research、EvoTrader 等示例；还有可定制 Agent、Higress AI Gateway、Manager-Workers 架构，以及 QwenPaw、HiClaw 两个应用形象，配套能力标签包括 Tool &amp; Skill Safety、Browser-Use、Multi-Agent、Memory、大小模型协同。</li>
+        <li><strong>左列是协议与模型接入</strong>：协议侧支持 A2A（智能体间通信）、A2UI、AG-UI（智能体与前端界面）、Response API，以及 Spark Design；模型侧接入 Claude、DeepSeek、Gemini、GLM、OpenAI、Qwen、Azure、Model Studio、Ollama、vLLM、SGL 等商用与自建推理方案。</li>
+        <li><strong>顶部横排是存储与记忆后端</strong>：EventBridge、MySQL、Oracle、PostgreSQL、TableStore、Qdrant、mem0、MongoDB、SQL Server、OceanBase、OSS、SQLite、Redis、Milvus，说明状态和记忆可以落到各种现有数据库与向量库。</li>
+        <li><strong>右列是"调优"配套生态</strong>：Data-Juicer、OpenJudge、ReMe、Trinity-RFT 等周边项目，对应数据处理、评估、记忆、强化微调等环节。</li>
+        <li><strong>底部是部署与可观测基础设施</strong>：Dojo Zero、Higress、Nacos、RocketMQ 支撑部署与消息；ARMS、LoongSuite、Langfuse、OpenTelemetry、LangSmith、Phoenix、SLS 支撑追踪与观测；Docker、E2B 作为沙箱运行时。</li>
+      </ul>
+      <p>这张图的信息量在于：AgentScope 不只做一个推理循环，而是把服务管理、事件、权限、上下文、中间件都内置进框架，同时向外兼容大量模型、存储、观测与沙箱生态——这正是"企业级、分布式"定位的具体含义，也为第二章 Harness 的出场做了铺垫。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方介绍确认 AgentScope 为阿里巴巴开源的多语言智能体框架，集团内十余条核心业务线已在生产使用；2.0 的核心升级即内置 Harness 工程化层。详见 <a href="https://java.agentscope.io/v2/zh/docs" target="_blank" rel="noopener">AgentScope 官方文档</a> 与 <a href="https://java.agentscope.io/v2/zh/blogs/agentscope-v2-explained" target="_blank" rel="noopener">AgentScope 2.0 官方解析</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p22">
+    <h2><span class="pageno">第 22 页</span>ReActAgent 核心组件</h2>
+    <figure><img src="assets/p022.png" alt="第 22 页：ReActAgent 七大核心组件" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用七张卡片拆解 ReActAgent（ReAct 即"推理→行动→观察→再推理"循环的智能体）的核心组件，说明裸框架已经具备哪些能力。这七块也是后面 Harness 叠加工程能力的地基：</p>
+      <ul>
+        <li><strong>Agent 智能体</strong>：ReAct 推理-行动循环引擎；多用户/多会话并发安全；流式事件与结构化输出；中断/恢复与人机交互。</li>
+        <li><strong>Model 模型层</strong>：Credential（凭证）+ ChatModel 两层架构；内置 DashScope、OpenAI、Anthropic、Gemini、Ollama 五大厂商；支持 Streaming（流式）、Thinking（思考过程）与多模态；可扩展自定义 Provider。</li>
+        <li><strong>Tool 工具系统</strong>：用 @Tool 注解或继承 ToolBase 定义工具；集成 MCP 协议（Model Context Protocol，模型上下文协议，支持 STDIO/SSE/HTTP 三种传输）；Skill 以 Markdown 指令集形式热加载；Tool Group 按需激活、自管理。</li>
+        <li><strong>Context 上下文</strong>：无状态引擎 + AgentState 持久化；RuntimeContext 承载每次调用（per-call）的元数据；用 Redis/MySQL 做分布式状态共享；支持跨节点故障转移与会话恢复。</li>
+        <li><strong>Middleware 中间件</strong>：5 个生命周期 Hook（钩子）位置；洋葱式（Onion）+ 变换式（Transformer）两种组织方式；OpenTelemetry 全链路追踪；限流、回退、动态 Prompt。</li>
+        <li><strong>Permission 权限</strong>：Rules + Mode + Built-in Checks 三层；五种模式 DEFAULT/EXPLORE/BYPASS/ACCEPT_EDITS/DONT_ASK；建议规则自动生成并持久化；危险路径不可绕过保护。</li>
+        <li><strong>Message &amp; Event</strong>：Msg 类型化内容块体系；AgentEvent 流式增量传输；Start→Delta→End 生命周期；SSE（Server-Sent Events，服务器单向推送）推送与断点重建消息。</li>
+      </ul>
+      <p>可以看出，ReActAgent 已经把"模型、工具、上下文、权限、中间件、消息事件"都模块化，但它关注的是"一次推理循环如何正确执行"。长期运行所需的记忆沉淀、工作区进化、沙箱隔离等能力，则由下一章的 Harness 补齐。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p23">
+    <h2><span class="pageno">第 23 页</span>1.0 → 2.0 迁移指南</h2>
+    <figure><img src="assets/p023.png" alt="第 23 页：1.0 到 2.0 迁移指南三栏对照" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给老用户一份迁移清单，用绿/红/橙三栏把变更分成"总体兼容""破坏性变更""已废弃"三类，帮助判断升级成本。</p>
+      <p><strong>绿色·总体兼容（平滑升级）</strong>：核心 API 保持一致，ReActAgent 的 Builder 模式不变，model/toolkit/sysPrompt 等参数平滑迁移；@Tool 注解完全兼容，已有 @Tool/@ToolParam 标注的工具类无需修改即可在 2.0 注册使用；MCP 客户端无缝衔接，McpClientBuilder API 不变，STDIO/SSE/Streamable HTTP 三种连接方式保持兼容；Model 层各 Provider（DashScope/OpenAI/Anthropic/Gemini/Ollama）的 ChatModel builder 接口不变；消息体系向后兼容，UserMessage/AssistantMessage/SystemMessage 构造方式不变。</p>
+      <p><strong>红色·破坏性变更（必须改造）</strong>：状态管理架构重构为无状态 Agent 引擎，AgentState 按 (userId, sessionId) 寻址，不再绑定单一 agent 实例；RuntimeContext 替代旧调用模式，call() 必须传入 RuntimeContext，per-call 元数据不再挂在 agent 实例上；AgentStateStore 强制配置，分布式部署（sandbox）下必须配置 Redis/MySQL 等分布式状态后端，否则 build() 抛异常；Middleware 注册方式变更，新增 5 层 hook 体系，旧回调/拦截器需迁移为 MiddlewareBase 实现；Permission System 全新引入，工具执行前置权限检查成为必选项，需配置 PermissionContextState（至少选择 Mode）。</p>
+      <p><strong>橙色·已废弃（v2.1 将移除）</strong>：Memory 接口（InMemoryMemory/LongTermMemory 等）标记 @Deprecated(forRemoval=true)，迁移到 AgentState.getContext() + AgentStateStore；ToolExecutionContext 标记废弃，底层自动桥接到 RuntimeContext、老代码暂不失效，建议迁移到 RuntimeContext；ToolCallParam.getContext() 已废弃，迁移到 getRuntimeContext()；ImageBlock/AudioBlock/VideoBlock 仍兼容但新代码建议统一用 DataBlock + mediaType；旧 interrupt() 无参重载在单 session 仍有效、多 session 下行为不确定，迁移到 interrupt(userId, sessionId)。</p>
+      <p>整体信号是：2.0 把"状态"从 agent 实例上剥离出来、按用户+会话寻址并强制分布式后端，这是支撑"企业级、分布式"的关键重构，也是迁移的主要成本所在；而工具、模型、消息等日常 API 尽量保持兼容以降低升级阻力。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p24">
+    <h2><span class="pageno">第 24 页</span>章节页：02 AgentScope Harness 核心设计</h2>
+    <figure><img src="assets/p024.png" alt="第 24 页：章节分隔页" loading="lazy"></figure>
+    <div class="explain">
+      <p>第二章章节分隔页，深蓝底白字，无正文。作用是进入全场核心——Harness 核心设计。接下来会先给总体架构与快速体验，再逐项展开 Workspace、抽象文件系统、上下文压缩、长期记忆、子智能体、沙箱、Skills、计划模式、Channel 等机制。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p25">
+    <h2><span class="pageno">第 25 页</span>AgentScope Harness 总体架构</h2>
+    <figure><img src="assets/p025.png" alt="第 25 页：AgentScope Harness 总体架构图" loading="lazy"></figure>
+    <div class="explain">
+      <p>这是第二章的总纲图，副标题一句话点题：在 ReActAgent 之上，把长期运行 agent 必备的工程能力打包。图自上而下分三段读：</p>
+      <p><strong>入口</strong>：最上方是"应用·用户请求"，箭头向下进入 HarnessAgent 大框。框内有一行斜体说明设计哲学——"薄包装·能力叠加在 ReAct 循环的关键时机·内部 middleware 顺序固定"，即 Harness 不重写推理循环，而是在循环的关键时机挂上能力，且内部中间件顺序是固定的。</p>
+      <p><strong>能力层</strong>：框内上排六个能力块——Workspace（人格/知识）、Memory（双层长期记忆）、Compaction（上下文压缩）、Subagents（子 agent 编排）、Filesystem（本机/KV/沙箱）、Skills（技能装配）；下排三个——Plan Mode（只读思考 + HITL，即人工介入）、Channel / Gateway（会话·路由·SSE）、Permission（工具白名单）。这九块就是后面逐页展开的主题。</p>
+      <p><strong>内核</strong>：能力层下方是一条黑色横 bar——"ReActAgent·推理循环（core）·Harness 不改写此层·只叠加钩子"。这强调了分层边界：推理循环是稳定内核，Harness 只通过钩子叠加，不动内核。</p>
+      <p><strong>共享对象</strong>：框外底部注明"共享对象（能力间零耦合，只通过这三者通信）"，列出三个：RuntimeContext（userId·sessionId·extra）、Workspace（AGENTS.md·MEMORY·skills）、AgentStateStore（跨请求恢复运行时状态）。意思是九个能力块彼此不直接依赖，全部经由这三个共享对象交换数据，从而做到能力间零耦合。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方解析确认了这一分层思路：裸 ReActAgent 只解决"一次推理"，HarnessAgent 在其上补齐工作区、记忆、沙箱、子 agent、上下文压缩等生产能力。见 <a href="https://java.agentscope.io/v2/zh/blogs/agentscope-v2-explained" target="_blank" rel="noopener">AgentScope 2.0 官方解析</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p26">
+    <h2><span class="pageno">第 26 页</span>AgentScope Harness 快速体验</h2>
+    <figure><img src="assets/p026.png" alt="第 26 页：Harness 快速体验代码示例" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用一段 Java 示例演示如何最快跑起一个 HarnessAgent，左侧是 Maven 依赖（groupId 为 io.agentscope、artifactId 为 agentscope-harness），右侧是主程序。讲解抓住几个配置点即可：</p>
+      <ul>
+        <li>用 HarnessAgent.builder() 链式构建：name 设为 "note-taker"，sysPrompt 设为"你是一个帮助用户做笔记的助手"。</li>
+        <li>model 用字符串形式 "dashscope:qwen-plus"，由 ModelRegistry 解析并自动读取 DASHSCOPE_API_KEY；注释说明切换厂商时改用 "openai:gpt-5.5"、"anthropic:claude-sonnet-4-5"、"gemini:gemini-2.0-flash" 或 "ollama:llama3"。</li>
+        <li>workspace 指向本地目录 .agentscope/workspace；compaction 用 CompactionConfig 配置触发阈值 triggerMessages(30)、保留窗口 keepMessages(10)。</li>
+        <li>构建 RuntimeContext 时带上 sessionId("demo-session") 与 userId("alice")。</li>
+      </ul>
+      <p>最关键的是末尾两轮调用：第一轮用户说"我叫天宇，今天准备一个关于 ReAct 的技术分享"；第二轮用同一个 sessionId 问"我叫什么？我今天要干什么？"，注释标明"同 sessionId，自动恢复上一轮状态后回答"。这个例子直观展示了 Harness 的状态持久化——第二轮无需重新告知身份，框架按 sessionId 自动恢复上一轮上下文。这也呼应了第 23 页"状态按 (userId, sessionId) 寻址"的重构。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p27">
+    <h2><span class="pageno">第 27 页</span>Workspace——智能体进化的 Source of Truth</h2>
+    <figure><img src="assets/p027.png" alt="第 27 页：Workspace 三类内容与四条设计线索" loading="lazy"></figure>
+    <div class="explain">
+      <p>Source of Truth 意为"唯一可信来源"。本页主张：「智能体是什么」+「学到了什么」都落成文件，集中在一个 Workspace 目录里。左侧把内容按生命周期分三类：</p>
+      <ul>
+        <li><strong>静态资产</strong>（工程师编辑）：AGENTS.md、knowledge/、skills/、subagents/、tools.json——定义智能体的人格、知识、技能与工具。</li>
+        <li><strong>运行时文件</strong>（框架/agent 写）：agents/&lt;id&gt;/sessions/、agents/&lt;id&gt;/tasks/、plans/——记录会话、任务与计划。</li>
+        <li><strong>长期记忆</strong>（agent + 后台任务）：MEMORY.md、memory/YYYY-MM-DD.md——沉淀跨会话学到的事实。</li>
+      </ul>
+      <p>右侧给出四条设计线索：① 定义与进化都是文件——不散落代码、不绑数据库，一个目录拷走就等于一个完整 agent；② 生命周期三分——静态/运行时/长期记忆走不同读写路径；③ 原生多租户隔离——IsolationScope 提供 SESSION / USER / AGENT / GLOBAL 四级隔离；④ Workspace 与 Filesystem 解耦（图中用垂直符号表示正交）——同一份目录布局可切换三种物理后端。第④点正是下一页"抽象文件系统"要展开的内容。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p28">
+    <h2><span class="pageno">第 28 页</span>抽象文件系统——Workspace 的物理载体</h2>
+    <figure><img src="assets/p028.png" alt="第 28 页：抽象文件系统三种物理后端" loading="lazy"></figure>
+    <div class="explain">
+      <p>副标题点明价值：同一份逻辑目录，三种物理后端，agent 代码零改动。结构是顶部"Workspace·逻辑目录布局"经"AbstractFilesystem 接口·WorkspaceManager 路由"向下分发到三种后端。三种后端的取舍如下：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">后端</th>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">定位 / Shell</th>
+          <th style="border:1px solid #e5e7eb;padding:6px 10px">关键特性</th>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Local + Shell</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">默认；提供 Shell</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Overlay 叠加 workspace + project；路径策略 ROOTED / SANDBOXED；单进程、本机开发、信任环境；快、简单、无外部依赖</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Remote KV</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">多副本；不提供 Shell</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">后端可选 Redis·JDBC·OSS·Nacos；本机模板 + 远端覆盖（两层读）；多副本共享 MEMORY/sessions；管理台改文件下轮生效</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">Sandbox</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">隔离；容器内 Shell</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 10px">支持 Docker·K8s·E2B·Daytona·AgentRun；Workspace Projection（SHA-256 增量投影）；快照恢复 pip / npm install 状态；生产跑不可信代码首选</td>
+        </tr>
+      </table>
+      <p>这里 KV 指键值存储，Overlay 指把 workspace 与 project 两层目录叠加读取，Projection 指把逻辑目录增量投影进沙箱。三者的分工很清晰：本机开发用 Local（快、零依赖），多副本分布式共享用 Remote KV（状态集中、可共享），生产环境跑不可信代码用 Sandbox（隔离 + 快照恢复）。因为上层只依赖 AbstractFilesystem 接口，切换后端时 agent 代码不用改。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p29">
+    <h2><span class="pageno">第 29 页</span>内置上下文压缩策略——四道防线</h2>
+    <figure><img src="assets/p029.png" alt="第 29 页：上下文压缩流水线与可调杠杆" loading="lazy"></figure>
+    <div class="explain">
+      <p>目标一句话：让对话保持在 token（模型计费与上下文长度的基本单位）预算内，同时不丢关键信息。中部是"压缩流水线（按触发时机排布）"，起点是 Tool 执行（产生工具结果），随后依次经过四道防线：</p>
+      <ul>
+        <li><strong>Result Eviction（结果卸载）</strong>：单条结果 &gt; 80K 就落盘，上下文里只留首尾 + 指针。</li>
+        <li><strong>Truncate Args（参数截断）</strong>：把大参数字符串截断，零 LLM 成本。</li>
+        <li><strong>Summary LLM（摘要）</strong>：把对话前缀压成结构化摘要，尾部保留原文。</li>
+        <li><strong>Overflow Recover（溢出恢复）</strong>：真的撞墙（超出上限）时做极端压缩，并自动重试一次。</li>
+      </ul>
+      <p>左下"可调节的杠杆"列出五个配置维度：触发阈值（triggerMessages·triggerTokens）、保留窗口（keepMessages·keepTokens）、Flush 时机（ALWAYS·NEVER·THROTTLED）、独立小模型（compaction.model / memory.model，即用便宜小模型做压缩）、卸载排除（read_file·grep_files 默认排除）。</p>
+      <p>右下"压缩不会触碰的内容"列出五类受保护数据：Plan Mode 状态（AgentState.planModeContext）、子 agent 后台任务（agents/&lt;id&gt;/tasks/&lt;sid&gt;.json）、todo_write 清单（AgentState.tasksContext）、权限规则（AgentState.permissionContext）、以及永不压缩的对话日志（sessions/&lt;sid&gt;.log.jsonl）。这保证压缩只瘦身对话本身，不会破坏计划、任务、权限和审计日志这些关键状态。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r2-p30">
+    <h2><span class="pageno">第 30 页</span>双层长期记忆——事实自动沉淀</h2>
+    <figure><img src="assets/p030.png" alt="第 30 页：双层长期记忆沉淀流程" loading="lazy"></figure>
+    <div class="explain">
+      <p>目标：让 agent 记住跨会话的事实，同时避免上下文无限膨胀。主流程是一条沉淀链：当前"对话 messages（当前上下文）"在每次 call 结束时经 Flush LLM 抽取，写入<strong>第一层·日流水账</strong>（memory/YYYY-MM-DD.md，追加、未去重）；第一层再经后台节流的 Consolidation LLM（最少 30 min/次）合并去重，沉淀为<strong>第二层·MEMORY.md</strong>（合并去重、策划后的长期记忆）；第二层每轮注入 System Prompt 的 &lt;memory_context&gt; 段，供模型直接使用。这样日常事实先快速记流水账，再低频整理成精炼长期记忆，既记得住又不让上下文膨胀。</p>
+      <p>除了自动注入，agent 还有三个主动查询工具：memory_search、memory_get、session_search；图中注明"见到 MEMORY.md 截断提示时会自动调用"，即注入内容被截断时 agent 会主动回查完整记忆。</p>
+      <p>底部列出"管线里的三次独立 LLM 调用（定制入口）"，各自可配 prompt：Flush（MemoryConfig.flushPrompt，从对话窗口抽取长期事实到日流水账）、Consolidation（MemoryConfig.consolidationPrompt，把每日流水账合并去重到 MEMORY.md）、Compaction Summary（CompactionConfig.summaryPrompt，把对话前缀压成一条摘要服务于当下上下文）。前两次属于长期记忆管线，第三次属于上一页的上下文压缩，二者共用小模型但职责不同：记忆管"跨会话沉淀"，压缩管"当下上下文瘦身"。</p>
+    </div>
+  </section>
+<section class="slide" id="r2-p31">
+  <h2><span class="pageno">第 31 页</span>子智能体编排、委派、并行、异步通知</h2>
+  <figure><img src="assets/p031.png" alt="第 31 页：子智能体编排、委派、并行、异步通知" loading="lazy"></figure>
+  <div class="explain">
+    <p>这一页讲主智能体如何把任务分出去。页顶一句话给出委派原则：把独立、上下文重、可并行的任务交给专家型子 agent——即主智能体不把所有事揽在自己上下文里，而是拆给专职子智能体。父智能体（Parent Agent）通过两个工具发起委派：agent_spawn（创建子智能体）与 agent_send（向子智能体发消息），向下分出四种形态：</p>
+    <ul>
+      <li><strong>同步子 agent</strong>（timeout &gt; 0）：父智能体阻塞等待结果，子智能体的输出流式转发回来，适合必须拿到结果才能继续的任务。</li>
+      <li><strong>后台任务</strong>（timeout = 0）：不等待，立即返回 task_id，任务完成后反向通知父智能体。图中黑色横条点明通知方式：system-reminder 自动反向注入——完成消息作为系统提醒自动写进父智能体上下文，父智能体无需轮询。</li>
+      <li><strong>远程子 agent</strong>：通过 url + headers 以 Agent Protocol HTTP 调用部署在别处的子智能体，子智能体不必与父智能体同进程。</li>
+      <li><strong>暴露给用户</strong>（expose_to_user=true）：子智能体直接对用户可见，用户可以绕过父智能体直连子 agent 对话。</li>
+    </ul>
+    <p>页底"关键能力"列出六条工程保障：workspace 支持 ISOLATED（隔离）/ SHARED（共享）两种模式；流式事件带 source 路径，能分辨事件来自哪一层子智能体；persistSession 复用实例，同一会话可复用子智能体；递归 3 层硬上限，防止子智能体无限套娃；DENY 权限自动继承，子智能体拿不到父智能体被禁止的权限；父智能体处于 Plan Mode 时子智能体自动只读。这六条分别解决了隔离、可追溯、复用、防失控、权限收敛、模式一致性六个问题。</p>
+  </div>
+  <div class="background">
+    <h3>补充背景（线上资料）</h3>
+    <p>子智能体编排是 Harness 工程层的能力之一。官方沙龙回顾将 Harness 概括为在 ReActAgent 之上封装 Workspace、上下文压缩、双层长期记忆、子智能体编排、沙箱、Skills、计划模式、Channel 等工程能力，本页起的连续多页正是逐项展开这些能力。<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区·沙龙回顾</a></p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p32">
+  <h2><span class="pageno">第 32 页</span>沙箱管理：隔离、恢复与分布式</h2>
+  <figure><img src="assets/p032.png" alt="第 32 页：沙箱管理：隔离、恢复与分布式" loading="lazy"></figure>
+  <div class="explain">
+    <p>沙箱即隔离的执行环境。本页口号是"把危险操作关进容器，把安装状态存进快照"，左侧三个设计点层层递进：01 执行边界——文件与 shell 命令都在隔离容器里执行，宿主完全不参与，危险命令只影响容器；02 跨调用恢复——pip install、npm install、临时文件都随快照保留，下次 call 无需重装重传，沙箱不是一次性的，环境状态可以跨调用延续；03 多副本可用——通过分布式 store + 远端快照，任意节点都能 resume 出同一份工作区，沙箱不绑定单机，这是分布式部署的关键。</p>
+    <p>快照后端提供四种选择：Local（本地磁盘）、Redis（低延迟）、OSS/S3（多副本）、JDBC（关系库），按部署形态挑选存储介质。</p>
+    <p>右侧是每次 call() 生命周期里的沙箱决策：先问"容器 &amp; workspace 还在吗？"，然后三级分支——有 → 复用（最快路径）；无容器但有快照 → 恢复（快照重建）；都没有 → 冷启动（按 WorkspaceSpec 全量初始化）。即"复用优先、恢复次之、冷启动兜底"，把最贵的全量初始化留到最后。</p>
+    <p>页底给出后端矩阵：Docker、Kubernetes、Daytona、E2B、AgentRun 五种沙箱后端可选。最下方小字补充并发语义：IsolationScope 决定沙箱 slot 复用——USER 为默认粒度；SESSION 粒度天然并发安全；AGENT/GLOBAL 粒度则需要 executionGuard 串行化，即多个调用共享同一个沙箱时要加锁排队，防止并发写坏环境。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p33">
+  <h2><span class="pageno">第 33 页</span>Skills：四层注册中心 &amp; 沙箱内执行</h2>
+  <figure><img src="assets/p033.png" alt="第 33 页：Skills：四层注册中心与沙箱内执行" loading="lazy"></figure>
+  <div class="explain">
+    <p>Skills 是可复用的能力包，页顶给出组成公式：SKILL.md（能力描述文件）+ references/（参考资料）+ scripts/（脚本）= 一个能力包。页面分左右两半，左半讲"技能从哪里来"，右半讲"技能怎么进沙箱执行"。</p>
+    <p>左半是注册中心的四层优先级，从低到高：L1 projectGlobalSkillsDir，项目全局目录 ~/.agentscope/skills/；L2 skillRepository(...)，市场后端，可接 Git / Nacos / MySQL / Classpath；L3 workspace/skills/，工作区共用，放项目特有约定；L4 &lt;userId&gt;/skills/，用户级隔离目录，优先级最高，可覆盖共用版。规律是越贴近具体用户、越私有的目录优先级越高，个人定制可以压过项目约定和市场版本。</p>
+    <p>右半是"沙箱内执行·三步透明化"，即把技能从注册中心落到沙箱文件系统的三步：01 物化 Stager——市场 skill 从内存写到宿主 .skills-cache/，做 SHA-256 文件级去重（相同内容不重复写），并启发式恢复 chmod +x（补回脚本执行权限）；02 Workspace Projection——把 skills/ + .skills-cache/ 打成 tar，hydrate（注入）进沙箱 /workspace，用内容 SHA-256 整体比对做增量，只同步变化部分；03 容器内执行——&lt;files-root&gt; 用容器内绝对路径，agent 不用猜路径，且快照保留 pip/npm install 副作用，技能脚本装过的依赖下次调用还在。三步合起来保证技能在沙箱里"路径确定、内容增量、状态延续"。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p34">
+  <h2><span class="pageno">第 34 页</span>计划模式：想清楚 -&gt; 写下来 -&gt; 再动手</h2>
+  <figure><img src="assets/p034.png" alt="第 34 页：计划模式：想清楚、写下来、再动手" loading="lazy"></figure>
+  <div class="explain">
+    <p>计划模式把"先规划后执行"固化成四步工作流：设计 → 写计划 → 人确认 → 执行。页顶的完整链路是：用户请求 → plan_enter（进入计划模式）→ 只读调查 → plan_write 写出 PLAN.md → plan_exit（退出计划模式）→ HITL 确认（Human-In-The-Loop，人在回路中审批）→ 执行阶段工具解禁。中间橙色横条点明：人确认这一步复用权限系统的 ASK 机制——计划审批不是新造的交互，而是走已有的权限询问通道。</p>
+    <p>左下是 Plan 阶段的工具白名单，思考阶段只放行只读与查询类工具：只读文件工具（read_file、grep_files、glob_files、list_files）、内存查询工具（memory_search、memory_get、session_search）、Plan 三件套（plan_enter、plan_write、plan_exit）、任务清单（todo_write）；Shell 为可选项，调用 .allowShellInPlanMode() 后才放开且仅限只读用途。写操作一律禁止，从工具层面保证"只想不动"。</p>
+    <p>右下强调判断状态不能只看 isPlanModeActive 一个布尔值，而要区分四种终态：未进入（模型直接 build，任务与 workspace 不匹配）；进入 → plan_exit（成功：规划完 + 获批 → build 模式）；仍 plan · 有 PLAN（已起草但未退出，后续消息可批准继续）；仍 plan · 无 PLAN（只说不做：文本像计划但没写出文件）。后两种是需要单独处理的滞留态，最后一种尤其是对"模型口头规划却不落盘"的防御性识别。</p>
+  </div>
+</section>
+<section class="slide" id="r2-p35">
+  <h2><span class="pageno">第 35 页</span>Channel：消息平台 -&gt; Gateway -&gt; Agent</h2>
+  <figure><img src="assets/p035.png" alt="第 35 页：Channel：消息平台到 Gateway 到 Agent" loading="lazy"></figure>
+  <div class="explain">
+    <p>Channel 即消息接入通道。本页是一张左中右三段拓扑，副标题点明价值："一行接线，自动完成会话管理·并发·路由·流式"——开发者只需一行配置把平台接进来，剩下的治理工作全由 Gateway 承担。</p>
+    <p>左列是七种消息平台/协议：HTTP / SSE（SSE 即 Server-Sent Events，服务器向客户端的流式推送）、WebSocket、钉钉、飞书、企业微信、GitHub、GitLab。中间是 Gateway 的路由与治理层（GatewayBootstrap），内含五项职责：会话管理——把 userId 映射为稳定的 sessionId，同一用户多条消息落到同一会话；Per-session 并发——同 session 的消息公平排队，会话内串行、会话间并行；Agent 路由——多 agent 场景按 agentId 分发；子 agent 桥——把 expose_to_user 的子智能体反向暴露给客户端（与第 31 页的"暴露给用户"形态呼应）；流式转发——把 Flux&lt;AgentEvent&gt; 事件流直通 SSE 推给客户端。</p>
+    <p>右列是 HarnessAgent 实例池，图中列出四个实例：sales（main 主智能体）、support、billing（均为 HarnessAgent）、reviewer（exposed subagent，即暴露给用户直连的子智能体）。整页的信息是：平台差异在 Channel 层被抹平，Gateway 统一做会话、排队、路由、流式，Agent 实例池只关心业务。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p36">
+  <h2><span class="pageno">第 36 页</span>章节页：AgentScope Service 企业级智能体控制面</h2>
+  <figure><img src="assets/p036.png" alt="第 36 页：第三部分章节页，AgentScope Service 企业级智能体控制面" loading="lazy"></figure>
+  <div class="explain">
+    <p>深蓝色章节分隔页，标题"3 AgentScope Service 企业级智能体控制面"，标志报告进入第三部分。前两部分讲框架本体（2.0 介绍）与单机工程层（Harness 核心设计），这一部分把视角抬到企业级：多个智能体、多种框架如何被统一管控与协作。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p37">
+  <h2><span class="pageno">第 37 页</span>AgentScope Service - 企业级智能体编排控制面</h2>
+  <figure><img src="assets/p037.png" alt="第 37 页：AgentScope Service 企业级智能体编排控制面架构图" loading="lazy"></figure>
+  <div class="explain">
+    <p>页顶的定位声明是本章核心主张：AgentScope Service 的目标不是替换你现有的 Agent 框架，而是提供一层统一控制面，把用不同框架（AgentScope、Langchain、ADK 等）、不同技术栈（Claude、OpenClaw、QwenPaw 等）搭建的智能体统一管控、协作起来。</p>
+    <p>下方系统架构图自上而下分四层。用户层（USER）是 Human；接入入口层（ENTRY）有两个入口：Dashboard（Browser 可视化控制台，给人用）与 REST API（SDK / curl，供第三方系统集成）；两者汇入中间的控制面（CONTROL PLANE）AgentScope Service Control Plane；控制面向下连接智能体接入层（AGENTS），图中并列五种接入方式：Managed Agents（平台托管运行）、AgentScope（原生接入）、LangChain（instrument sdk，即在框架里埋入上报 SDK）、Claude（Sidecar 接入）、QwenPaw（Sidecar 接入）。Sidecar 指与智能体伴生部署的边车进程，由它负责上报与受控，智能体本体不用改造。</p>
+    <p>五种接入方式的差异正体现了"不替换框架"的设计：自家框架原生接入，第三方框架靠埋点 SDK 或边车接入，完全托管的则由平台直接运行——控制面只做统一管控，不要求重写已有智能体。</p>
+  </div>
+  <div class="background">
+    <h3>补充背景（线上资料）</h3>
+    <p>这一定位与官方沙龙回顾一致：Service 提供企业级控制面，统一管控不同框架、不同技术栈搭建的智能体并使其协作。想深入可对照<a href="https://java.agentscope.io/v2/zh/docs" target="_blank" rel="noopener">AgentScope 官方文档</a>与<a href="https://java.agentscope.io/v2/zh/blogs/agentscope-v2-explained" target="_blank" rel="noopener">官方 Harness 解析博客</a>。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p38">
+  <h2><span class="pageno">第 38 页</span>控制面 &amp; Dashboard</h2>
+  <figure><img src="assets/p038.png" alt="第 38 页：控制面 Dashboard 截图，Fleet overview 与 token 用量统计" loading="lazy"></figure>
+  <div class="explain">
+    <p>本页是控制面 Dashboard 的真实截图（图中控制台名为 aistio，副标题 Control plane console）。左侧导航展示控制面的功能分区：Dashboard 下有 Overview、Agents、Sessions、Governance（治理）四个视图，另有 Managed Agents 与 Teams 两大板块，底部是 Users、Profile 等管理入口。</p>
+    <p>右侧主屏是 Fleet overview（实例群总览），说明文字点明数据来源：跨框架的智能体实例与运行时会话统一上报进控制面。顶部一排指标卡：Agents 1、Healthy instances 1、Stale instances 0（stale 指失联/过期的实例）、Active sessions 3、Idle sessions 0、Tokens (24h, Δ) 6,319、Errors (24h) 0；并注明 Agents 只统计存活实例，另有 3 historical（历史实例）单独列出。</p>
+    <p>中部 Token usage (24h) 图表按"每小时用量增量求和"统计，括号里特别强调 not cumulative snapshots——算的是每小时增量而非累计快照，曲线反映真实消耗节奏（图中悬浮提示 14:00 为 6,319 tokens）。底部两张 Top 10 榜单按最近 24 小时 token 增量排序，分别按 agent 和按 session：图中 default agent 与一个 phase 为 active 的会话各消耗 6,319 tokens。整页展示控制面的可观测性：实例健康、会话活跃、token 消耗、错误数跨框架统一汇总，一屏可见。</p>
+  </div>
+</section>
+<section class="slide" id="r2-p39">
+  <h2><span class="pageno">第 39 页</span>Managed Agents 实现 Harness 全托管</h2>
+  <figure><img src="assets/p039.png" alt="第 39 页：Managed Agents 新建智能体表单，链接 Workspace 继承配置" loading="lazy"></figure>
+  <div class="explain">
+    <p>本页是控制面"新建托管智能体"的真实截图。左侧 Managed Agents 菜单列出托管对象：Agents、Sessions、Workspaces、Environments、Memory、Vaults（密钥库）、Deployments、Channels——Harness 的各项工程能力在控制面里都变成了可管理资源。</p>
+    <p>右侧 New agent 表单演示创建过程：填 Name（Assistant）、Description（Demo Assistant Agent），关键一步是链接 Workspace（图中选 test）。表单顶部提示说明链接的意义：AGENTS.md / skills / tools / subagents 在 Workspace 里"一次编写"，创建智能体时"重新物化"继承进来；信息框显示将从 test (v1) 继承 AGENTS.md、skills 0、subagents 0，system prompt 留空则直接使用 workspace 的 AGENTS.md；Workspace 留空则为 agent-private definition（智能体私有定义）。其余可选项：Default environment 选 None 时 Chat 会保证一个 local default，Vaults 与 memory stores 可稍后在 Settings 挂载；Workspace path 可覆盖，留空用控制面默认路径，绝对路径原样使用；底部 System prompt 示例为 "You are a helpful assistant."。</p>
+    <p>这页把前两条线合在一起：Harness 的 Workspace、Skills 等成为控制面上的声明式资源，"全托管"意味着创建智能体变成填表 + 继承，运行、环境、记忆、密钥都由平台管理。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p40">
+  <h2><span class="pageno">第 40 页</span>Agent Service 内部组件架构（纯图页）</h2>
+  <figure><img src="assets/p040.png" alt="第 40 页：Agent Service 内部组件架构图，gateway、aistiod、dataplane、scheduler 与 PostgreSQL、运行时层" loading="lazy"></figure>
+  <div class="explain">
+    <p>本页没有任何标题文字，整页是一张 Agent Service 的内部组件架构图，展示控制面落地为可部署服务时的进程拆分。自上而下：最上层是 Web Console，含 Dashboard、Managed Agents、Agent Teams 三大块；用户经 Browser / SDK / CLI 访问，请求先到 service-gateway（端口 8080），负责认证与公共 API 路由，即统一入口、鉴权、反向代理。</p>
+    <p>gateway 向下分给两个服务：aistiod（8081）是产品与运行时控制面，负责 Agent 注册、Agent Teams；service-dataplane（8082）被称为 AgentScope Brain，负责 Turn（一轮对话）、Event、SSE 流式推送、HITL（人在回路）。两者都落到 PostgreSQL，库内分 cp · rt · dp 三个 schema（对应控制面、运行时、数据面）。右侧 service-scheduler（8083）负责 Channel、Cron（定时任务）、Hands Worker，同样读写 PostgreSQL。最底部 RUNTIME 横带列出三类执行载体：Managed Agents Runtime（全托管运行时）、Self Hosted Framework Runtime（自托管框架运行时）、Sandbox。</p>
+    <p>整页回答"控制面自己是怎么部署的"：入口、控制、数据、调度各有独立进程与端口，状态统一收敛到 PostgreSQL，执行层同时兼容托管与自托管——与第 37 页"不替换现有框架"的定位在部署形态上对应。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p41">
+  <h2><span class="pageno">第 41 页</span>实现多 Agent 协作</h2>
+  <figure><img src="assets/p041.png" alt="第 41 页：Teams 多 Agent 协作截图，team1 拓扑、任务看板与团队聊天" loading="lazy"></figure>
+  <div class="explain">
+    <p>本页用团队视图的真实截图展示多 Agent 协作的落地形态。团队 team1 的任务描述是"帮我分析e2b沙箱和daytona沙箱"，拓扑（TOPOLOGY）里有两个 managed 智能体：lead 与 worker1，当前均 Idle；顶部状态条显示 tasks 1/2 complete · 1 in progress · 0 pending，并提供 Complete team 与 Force delete 按钮结束团队。</p>
+    <p>中部是看板式的 Task board，列分为 Unassigned / Assigned / In progress / Blocked / Completed / Failed：图中 task-1"分析 e2b 治理沙箱"已由 worker1 完成，task-2"分析 daytona 治理沙箱"由 lead 进行中，卡片上有 Complete 与 Unclaim（放弃认领）操作，另可 Add task 新加任务。右侧是 lead 的 Team chat 窗口：worker1 发来团队消息"[team:team1 from worker1] I have claimed task-1…"，即 worker 主动认领任务并在团队通道里通知 lead；聊天下方列出 claimTask（认领任务）、memory_save、team 三条工具调用记录，说明协作动作本身是工具调用驱动的。左侧导航的 Teams 板块下还有 Overview、Teams、Templates 入口。</p>
+    <p>这页的要点是：控制面把多智能体协作做成了可见可管的产品形态——拓扑、任务看板、团队消息、工具调用都有 UI，任务以"认领—执行—完成"的看板流转，而不是黑盒式的自动对话。</p>
+  </div>
+</section>
+
+<section class="slide" id="r2-p42">
+  <h2><span class="pageno">第 42 页</span>扫码加入钉钉群（结尾页）</h2>
+  <figure><img src="assets/p042.png" alt="第 42 页：钉钉群二维码结尾页" loading="lazy"></figure>
+  <div class="explain">
+    <p>报告结尾页：一个钉钉群二维码，配文"扫码加入钉钉群"，供听众加入社区交流；底部为阿里云标识与 slogan"计算，为了无法计算的价值"。无技术内容。</p>
+  </div>
+</section>
+
+<section class="takeaways">
+  <h2>要点回顾</h2>
+  <ul>
+    <li><strong>2.0 = ReAct 内核 + Harness 工程层。</strong>ReActAgent 负责推理-行动循环，Harness 在其上封装 Workspace、上下文压缩、双层长期记忆、子智能体编排、沙箱、Skills、计划模式、Channel 等工程能力，把"能对话的模型"变成"能长期干活的生产级智能体"。</li>
+    <li><strong>Workspace 是智能体进化的 Source of Truth。</strong>抽象文件系统是其物理载体；AGENTS.md、skills、tools、subagents 一次编写、到处继承重新物化，控制面创建托管智能体时直接链接 Workspace 继承全部定义。</li>
+    <li><strong>上下文压缩四道防线 + 双层长期记忆自动沉淀事实。</strong>前者守住单会话上下文窗口，后者把跨会话事实自动提取沉淀，两者分工解决"记不下"与"记不住"。</li>
+    <li><strong>每项工程能力都带防御性设计。</strong>子智能体递归 3 层硬上限、DENY 权限自动继承；沙箱"复用→快照恢复→冷启动"三级决策与多副本 resume；Skills 四层优先级覆盖与沙箱内三步物化；计划模式只读白名单 + 复用权限 ASK 的人确认；Channel 一行接线自动完成会话、排队、路由、流式。</li>
+    <li><strong>AgentScope Service 是统一控制面，不是又一个框架。</strong>它以原生 / instrument sdk / Sidecar / 全托管四种接入方式统一管控不同框架、不同技术栈的智能体；Dashboard 跨框架汇总健康与 token 用量，Managed Agents 全托管 Harness，Teams 用任务看板 + 团队消息实现多 Agent 协作；内部拆为 gateway、aistiod、dataplane、scheduler 四个服务进程，状态收敛于 PostgreSQL。</li>
+  </ul>
+</section>
+
+<section class="refs">
+  <h2>参考资料</h2>
+  <ul>
+    <li><a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区·沙龙回顾摘要</a> — 官方回顾，核实 Harness 工程能力清单与 Service"统一管控而非替换框架"的定位。</li>
+    <li><a href="https://java.agentscope.io/v2/zh/docs" target="_blank" rel="noopener">AgentScope 官方文档（v2 中文）</a> — 框架与 Harness 各能力的正式文档入口。</li>
+    <li><a href="https://java.agentscope.io/v2/zh/blogs/agentscope-v2-explained" target="_blank" rel="noopener">官方 Harness 解析博客</a> — 对 AgentScope 2.0 Harness 设计的官方解读，可与本讲解对照阅读。</li>
+  </ul>
+</section>
+</div>
+<div class="report-panel" id="report-3">
+  <header class="report-head">
+    <h1>RocketMQ LiteTopic 实践案例 —— 轻量队列模型特性解析与场景落地 / 百炼平滑限流案例</h1>
+    <p class="meta">讲师：张硕（RocketMQ Maintainer） · 智能体构建与进化——Agent 开源开发者沙龙 · 原 PDF 第 43–59 页，共 17 页</p>
+  </header>
+
+  <section class="overview">
+    <h2>全局理解：这个报告在讲什么</h2>
+    <p>这个报告回答一个问题：当队列数量从"数千个长生命周期的业务 Topic"变成"百万个短生命周期的会话"时，消息模型要怎么改，以及这种改法能为大模型网关的限流带来什么。前半部分（第 45–50 页）拆解 LiteTopic 的定位与四个核心特性：它依然是基于主题的发布/订阅异步消息模型，但队列可以在运行时动态创建与销毁、支撑规模从传统商业实例的 3,000 上限跃升到 20 万至千万级并靠 TTL 自动回收、订阅关系可以按客户端自由组织、单队列天然 FIFO 顺序消费。后半部分（第 51–58 页）以百炼（阿里云大模型服务平台 Model Studio）为案例：百万级租户争抢稀缺 GPU，传统"放行/拒绝"两态限流会直接误伤突发流量；方案改为 PASS/QUEUE/REJECT 三态，超限请求进入按用户隔离的队列缓冲、按基础速率放行，最终限流异常比例下降 10 倍，并把这套做法抽象成通用限流插件 spring-cloud-gateway-rocketmq-ratelimiter。阅读时抓住一条主线：队列变"轻"之后，原本要靠独立 Topic、独立消费集群才能做到的隔离与控速，可以下沉到每条队列自身完成。官方沙龙回顾可对照<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区回顾文章</a>。</p>
+  </section>
+
+  <details class="page-toc">
+    <summary>逐页目录（点击跳转）</summary>
+    <ol>
+      <li><a href="#r3-p43">第 43 页 · 封面：LiteTopic 实践案例</a></li>
+      <li><a href="#r3-p44">第 44 页 · 目录</a></li>
+      <li><a href="#r3-p45">第 45 页 · 章节页：LiteTopic 特性</a></li>
+      <li><a href="#r3-p46">第 46 页 · 依然是发布 / 订阅模型</a></li>
+      <li><a href="#r3-p47">第 47 页 · 特性一：动态创建与销毁</a></li>
+      <li><a href="#r3-p48">第 48 页 · 特性二：低成本 · 海量规模</a></li>
+      <li><a href="#r3-p49">第 49 页 · 特性三：差异化订阅</a></li>
+      <li><a href="#r3-p50">第 50 页 · 特性四：顺序消费</a></li>
+      <li><a href="#r3-p51">第 51 页 · 章节页：百炼平滑限流案例</a></li>
+      <li><a href="#r3-p52">第 52 页 · 背景：百万租户 × 稀缺 GPU</a></li>
+      <li><a href="#r3-p53">第 53 页 · 从两态限流到三态平滑限流</a></li>
+      <li><a href="#r3-p54">第 54 页 · 基于 RocketMQ 的方案流程</a></li>
+      <li><a href="#r3-p55">第 55 页 · 落地效果：四个基于 LiteTopic 的适配</a></li>
+      <li><a href="#r3-p56">第 56 页 · 通用抽象：四个关键点</a></li>
+      <li><a href="#r3-p57">第 57 页 · 插件整体架构</a></li>
+      <li><a href="#r3-p58">第 58 页 · 关键能力：五项开箱即用</a></li>
+      <li><a href="#r3-p59">第 59 页 · 结尾页</a></li>
+    </ol>
+  </details>
+
+  <section class="slide" id="r3-p43">
+    <h2><span class="pageno">第 43 页</span>封面：LiteTopic 实践案例</h2>
+    <figure><img src="assets/p043.png" alt="第 43 页：封面，LiteTopic 实践案例" loading="lazy"></figure>
+    <div class="explain">
+      <p>封面页。主题标识为 ROCKETMQ · LITETOPIC，主标题"LiteTopic 实践案例"，两行副标题点出报告的两块内容：轻量队列模型特性解析与场景落地、百炼平滑限流案例。右侧为装饰性圆环图形，无信息点。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p44">
+    <h2><span class="pageno">第 44 页</span>目录</h2>
+    <figure><img src="assets/p044.png" alt="第 44 页：目录，两个章节" loading="lazy"></figure>
+    <div class="explain">
+      <p>目录页，报告分两章：01 LiteTopic 特性——轻量队列模型的四个核心特性详解；02 百炼平滑限流案例——从突发限流到通用限流插件。结构是先讲模型特性，再用一个生产案例验证特性，最后把案例收敛成可复用的插件。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p45">
+    <h2><span class="pageno">第 45 页</span>章节页：LiteTopic 特性</h2>
+    <figure><img src="assets/p045.png" alt="第 45 页：章节分隔页，LiteTopic 特性" loading="lazy"></figure>
+    <div class="explain">
+      <p>第一章分隔页。页面给出本章定位：LiteTopic 是面向海量短生命周期会话的轻量队列模型，接下来四个核心特性逐一拆解。这句定位是理解后面所有特性的前提——队列不再是长期存在的业务资产，而是随会话产生、随会话结束消失的临时资源。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p46">
+    <h2><span class="pageno">第 46 页</span>依然是发布 / 订阅模型</h2>
+    <figure><img src="assets/p046.png" alt="第 46 页：LiteTopic 与传统 Topic 同为发布订阅模型" loading="lazy"></figure>
+    <div class="explain">
+      <p>先讲清楚"什么没变"：LiteTopic 与传统 Topic 本质相同，都是基于主题的 Pub/Sub（发布/订阅）异步消息模型。图中 Producer 通过 PUB 把消息发往 Topic（代码形态为 msg.setTopic(T)），Consumer 通过 SUB 订阅 Topic（subscribe(Topic)），中间的主题框标注"传统 Topic / LiteTopic 本质相同"。右侧卡片总结共同本质：异步解耦、削峰填谷，消息沿 Message → Topic → Consumer 流动。</p>
+      <p>页面底部点出"区别在于"：LiteTopic 在模型细节和使用场景上有自己的特点——更轻量的生命周期管理、更大规模的队列支撑、更灵活的订阅方式，也就是接下来四页要展开的内容。先立共同本质再讲差异，是为了说明 LiteTopic 不是新协议，而是同一模型下的轻量化形态。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p47">
+    <h2><span class="pageno">第 47 页</span>特性一：动态创建与销毁</h2>
+    <figure><img src="assets/p047.png" alt="第 47 页：传统 Topic 与 LiteTopic 创建方式对比" loading="lazy"></figure>
+    <div class="explain">
+      <p>特性一对比两种队列的生命周期管理方式，副标题概括为"不需要预配置，业务运行时数据面决定队列名字，随用随建、用完即走"。</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="border:1px solid #e5e7eb;padding:6px 10px">传统 Topic</th><th style="border:1px solid #e5e7eb;padding:6px 10px">LiteTopic</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">预先创建，生命周期长</td><td style="border:1px solid #e5e7eb;padding:6px 10px">动态创建和生成，运行时即建即用</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">与应用/业务生命周期一致</td><td style="border:1px solid #e5e7eb;padding:6px 10px">业务数据面决定其名字</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">如交易系统中的 "Order" Topic</td><td style="border:1px solid #e5e7eb;padding:6px 10px">一个 SessionId、TaskId、RequestId 均可</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">创建需审批、配置路由、分配资源</td><td style="border:1px solid #e5e7eb;padding:6px 10px">粒度可粗可细，由业务场景决定</td></tr>
+      </table>
+      <p>页面底部的彩色条示意运行时随时冒出的队列：Session-A、Task-42、Request-xyz、Session-B……随时创建。对照来看，传统 Topic 是"控制面先规划好、业务再使用"，LiteTopic 把命名权和创建时机交给业务数据面，队列粒度可以细到一次会话、一个任务甚至一个请求。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>LiteTopic 是 RocketMQ 5.x 引入的轻量级队列形态：发消息到一个不存在的队列即自动创建，无需预创建流程，这正是"运行时即建即用"的实现方式。见 <a href="https://www.alibabacloud.com/blog/model-studio-gateway-in-practice-using-rocketmq-litetopic-to-cut-the-throttling-ratio-by-10%C3%97_603607" target="_blank" rel="noopener">Alibaba Cloud 博客：Model Studio Gateway in Practice</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p48">
+    <h2><span class="pageno">第 48 页</span>特性二：低成本 · 海量规模</h2>
+    <figure><img src="assets/p048.png" alt="第 48 页：3,000 与 20W~KW 的规模对比及 TTL 自动回收" loading="lazy"></figure>
+    <div class="explain">
+      <p>两张数字卡片构成对比：传统 Topic 上限（商业实例）为 3,000，受实例规格限制、创建成本高；LiteTopic 支撑规模为 20W ~ KW，即 20 万到千万级，轻量化设计使创建与维护成本极低。副标题称之为"从数千到千万级的跨越"。</p>
+      <p>规模放大后必须回答"用完的队列谁来清理"。页面下方给出 TTL（Time To Live，此处指不活跃超时时间）自动回收：当某个 LiteTopic 不活跃时间超出配置后，自动销毁回收、释放 Quota 空间，无需人工清理、资源零泄漏。动态创建与自动回收合起来构成闭环，才撑得起海量短生命周期会话——否则队列只增不减，规模优势会被资源泄漏吃掉。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>线上资料给出的口径是单 Broker 支撑百万级队列、不活跃超 TTL 自动回收，与本页"20W ~ KW"的集群级规模口径互为补充。见 <a href="https://developer.aliyun.com/article/1761936" target="_blank" rel="noopener">阿里云开发者社区：LiteTopic 技术文章</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p49">
+    <h2><span class="pageno">第 49 页</span>特性三：差异化订阅</h2>
+    <figure><img src="assets/p049.png" alt="第 49 页：Group 集群消费与客户端级自由订阅对比" loading="lazy"></figure>
+    <div class="explain">
+      <p>左侧是传统消费模型：基于 Group 分组的集群消费——相同订阅主题、相同处理逻辑的一组消费实例通过 Group 归组，一条消息在集群内被其中一个实例消费。图中 Topic-A 与 Topic-B 都指向 Group-1（内含 C1 / C2 / C3），再"集群内选一"。这个模型的前提是组内订阅关系整齐划一，无法按实例区分。</p>
+      <p>右侧是 Lite 消费模型：在单个客户端维度添加自己感兴趣的主题，多个客户端可订阅相同集合，也可部分相同、完全不同。图中 Lite-A / Lite-B / Lite-C 三个主题被 Client-1、Client-2 自由组合成 A,B / B,C / A,B,C 三种集合，每个 Client 独立订阅。订阅关系从"组级统一"变为"客户端级自由组织"，这为后面案例中"放行通知只回到持有用户连接的那台机器"提供了模型基础。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p50">
+    <h2><span class="pageno">第 50 页</span>特性四：顺序消费</h2>
+    <figure><img src="assets/p050.png" alt="第 50 页：传统 ShardingKey 顺序消息与 LiteTopic 单队列 FIFO 对比" loading="lazy"></figure>
+    <div class="explain">
+      <p>左侧传统顺序消息：同一 Topic 下有多个逻辑队列，消息落入哪个队列由 ShardingKey（业务 ID）的 Hash 决定；同一业务 ID 的消息一定在同一队列上保持顺序，但不同业务 ID 可能共享同一队列。图中 Queue-0 里 sessA 与 sessB 的消息交错排列（sessA-m1、sessB-m1、sessB-m2、sessA-m2……），Queue-1 里 sessC 与 sessE 交错，Queue-N 里是 sessD、sessF；图注总结为"同 ID 必同队列（保序），不同 ID 可共享队列（交错排列）"。</p>
+      <p>右侧 LiteTopic 顺序：一个 LiteTopic 全局只有一个逻辑队列，默认就是 FIFO（First In First Out，先进先出）消费；队列内全部是同一个 LiteTopic 的消息，天然有序，无需 ShardingKey。图中 sessionA 的 m1 至 m5 依次排成一列。页面同时给出可选项"拆分"：并发度高且无顺序要求时，可拆分为 sessionA-1 / sessionA-2 / sessionA-3 等多个独立 LiteTopic，用放弃顺序换取并发度。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p51">
+    <h2><span class="pageno">第 51 页</span>章节页：百炼平滑限流案例</h2>
+    <figure><img src="assets/p051.png" alt="第 51 页：章节分隔页，百炼平滑限流案例" loading="lazy"></figure>
+    <div class="explain">
+      <p>第二章分隔页，一句话点明案例主题：用 RocketMQ LiteTopic 重构大模型限流，从"直接拒绝"到"排队放行"。百炼即阿里云大模型服务平台 Model Studio，本案例的限流对象是它的模型调用网关。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>百炼网关基于 LiteTopic 实现平滑限流的完整实践见 <a href="https://www.alibabacloud.com/blog/model-studio-gateway-in-practice-using-rocketmq-litetopic-to-cut-the-throttling-ratio-by-10%C3%97_603607" target="_blank" rel="noopener">Alibaba Cloud 博客：Model Studio Gateway in Practice</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p52">
+    <h2><span class="pageno">第 52 页</span>背景：百万租户 × 稀缺 GPU，限流误差被成倍放大</h2>
+    <figure><img src="assets/p052.png" alt="第 52 页：限流误差被放大的三层背景" loading="lazy"></figure>
+    <div class="explain">
+      <p>背景页用三张卡片层层递进，解释为什么百炼的限流必须做得精准。第一，百万级租户抢算力：百万级用户同时调用数十种大模型，GPU 是最稀缺的生产要素，限流本质上是在分配稀缺算力。第二，误判即双向损失：限流误判会让用户超时、频繁重试；过载放行则浪费算力、劣化他人体验——两个方向判错都有代价。第三，误差被百万租户放大：一次误判的影响会沿租户规模扩散，小误差酿成大故障。标题中"成倍放大"指的就是这种规模效应：同样的限流误差率，在百万租户下造成的绝对影响完全不是一个量级。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p53">
+    <h2><span class="pageno">第 53 页</span>从"门口直接拦人"升级为"取号等候区"</h2>
+    <figure><img src="assets/p053.png" alt="第 53 页：传统两态限流与平滑三态限流对比" loading="lazy"></figure>
+    <div class="explain">
+      <p>左侧传统限流是两态：放行——在阈值内立即通过；拒绝——超出即返回 429（HTTP 状态码，表示请求过多）。其缺陷被概括为两条：突发流量被直接误伤；只能"拒绝"，不能"缓冲"。</p>
+      <p>右侧平滑限流加入中间态变成三态：PASS——能过就立即过；QUEUE——过不了就排队等候；REJECT——排满了才拒绝；并明确手段是"用异步队列削峰填谷"。两态与三态的差别在于是否给超限请求一个缓冲机会：突发往往只是"来得太密"而不是"真的太多"，排队等到流量低谷就能自然消化，只有队列都排满才真正拒绝。页面底部一句话结论：排队等一等，好过直接被拒之门外。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p54">
+    <h2><span class="pageno">第 54 页</span>限流识别 → MQ 缓冲入队 → 排队整形 → 模型服务</h2>
+    <figure><img src="assets/p054.png" alt="第 54 页：基于 RocketMQ 的平滑限流全流程图与传统 Topic 问题对照" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页是方案的整体流程图，自上而下四层。第一层流量来源"海量用户、多种模型"：用户A（Qwen3.7-max）、用户B（Deepseek-v4）、用户C（Happyhorse-1.0）直至用户M（Wan2.7），示意大量用户各自调用不同模型。第二层"限流识别"把请求分成三路：正常请求走绿色"bypass 不入队"直通模型服务；TPM（Tokens Per Minute，每分钟 token 数）超限拒绝直接挡回；突发限流一路向下进入"Message Queue 缓冲入队"。第三层"排队整形"：入队后由集群 #1 至集群 #N 多个消费集群承接，每个集群对应一组 topic / group（topic_1 / group_1 等），用专有机器控速消费，把突发流量整形成平滑放行后再调第四层"模型服务"（Qwen、happyhorse、智谱AI、DeepSeek、MiniMax 等）。</p>
+      <p>右侧小图与底部三张卡片指出用传统 Topic 承载这条链路的代价。右图标题"传统 Topic - 隔离单元 = 队列"：用户A 至用户E 的消息落进共享 Q0、共享 Q1 两条队列，红字标注"N 个用户挤 M 条队列，消息混排"，不同用户的消息在同一队列内交错。由此引出底部三个问题：其一队头阻塞——传统消费模型自带 HOL Blocking（队头阻塞，队首消息处理慢会挡住后面所有消息），每个【用户+模型】需创建独立 Topic/Group 保证互不影响；其二运维成本高、无法合池——独立消费集群无法跨用户/模型共享，资源利用率低；其三缺乏扩展性——特殊用户特殊配置、无法动态调整，新增用户或模型需新增配置，topic 以 userId + model 命名。这三个问题正是下一页 LiteTopic 四个适配要解决的对象。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>"排队整形"即漏桶限流思路：请求先入队缓冲，按固定速率放行，把突发流量整形成平滑流量。线上回顾文章将百炼方案概括为"从直接拒绝到排队放行"的平滑限流。见 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区：沙龙回顾</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p55">
+    <h2><span class="pageno">第 55 页</span>四个基于 LiteTopic 的适配</h2>
+    <figure><img src="assets/p055.png" alt="第 55 页：四个 LiteTopic 适配、用户级队列隔离示意图与 10 倍效果" loading="lazy"></figure>
+    <div class="explain">
+      <p>左侧四张卡片是百炼方案落在 LiteTopic 上的四个适配。1 海量：为每个 userId、userId + model、APIkey 创建独立队列，精准限流。2 动态：需要开启的用户直接 Diamond（配置中心）配置，入口处生效。3 Suspend 语义：按队列挂起，毫秒到小时级控制。4 精准订阅：放行通知回到用户连接机器。</p>
+      <p>右侧示意图展示适配后的形态：一个用户一条 lite 队列，做用户级限流与挂起；用户A、C、D、E 均"消费中"，只有用户B 因"触发限流 → 挂起消费"而"已挂起"，消息积压在自己队列里；图注强调队列间逻辑隔离——单用户堆积、限流、挂起均不影响其他用户，到期自动恢复，规模可至百万级用户，按用户隔离消费。对照上一页：传统 Topic 要靠独立 Topic/Group 加独立集群才能做到的隔离与控速，现在每条队列自身即可完成。底部效果条给出结果：限流异常比例下降 10×，用户可感知问题收敛，资源合池。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>Suspend 语义的具体机制：消费回调返回 Suspend N（毫秒）可让 Broker 暂停该队列投递 N 毫秒而不影响其他队列，相当于把漏桶的"放行速率控制"落到 Broker 层；百炼按 userId + model 维度建队列实现用户级隔离限流。见 <a href="https://www.alibabacloud.com/blog/model-studio-gateway-in-practice-using-rocketmq-litetopic-to-cut-the-throttling-ratio-by-10%C3%97_603607" target="_blank" rel="noopener">Alibaba Cloud 博客</a> 与 <a href="https://developer.aliyun.com/article/1761936" target="_blank" rel="noopener">开发者社区技术文章</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p56">
+    <h2><span class="pageno">第 56 页</span>从百炼方案抽象出的四个关键点</h2>
+    <figure><img src="assets/p056.png" alt="第 56 页：通用限流流程图与四个关键点卡片" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页把百炼的具体做法抽象成一条通用流程。上方流程图：Start 出发，先"根据用户和模型查找限流配置"，再做"突发限流校验"（框上标注"以X倍基础限流校验"），随后进入"是否限流"判断——判定限流的分支直接走向 End；另一分支进入红框标出的核心两步："投递到用户模型队列"→"按基础限流消费"，之后是"推理"→"突发限流用量后计量"，最后回到 End。红框强调的正是"缓冲队列 + 按基础速率放行"这一段平滑限流的核心。</p>
+      <p>下方四张卡片把流程归纳为四个关键点：1 用户级限流配置——按用户 + 模型查找限流配置；2 突发限流识别——以 X 倍基础限流做突发校验；3 缓冲队列——超限请求投递到用户模型队列；4 放行及调用后处理——按基础限流消费，推理后计量。注意第 4 点把计量放在推理之后：限流额度按实际调用结果扣减，而不是请求一进门就扣。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p57">
+    <h2><span class="pageno">第 57 页</span>插件整体架构：spring-cloud-gateway-rocketmq-ratelimiter</h2>
+    <figure><img src="assets/p057.png" alt="第 57 页：限流插件组件架构图" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出通用限流插件 spring-cloud-gateway-rocketmq-ratelimiter 的组件图。请求路径（绿线）：Client Request 以 inbound HTTP 进入插件核心过滤器 BufferedRateLimitGatewayFilterFactory，由它编排 PASS / QUEUE / REJECT 三态；PASS 的请求经 PASS forward 转发到下游 Backend Service；REJECT 429 / timeout 504 沿红线直接返回客户端。插件由自动装配类 RocketMQRateLimiterAutoConfiguration 装配进网关。</p>
+      <p>过滤器向三个方向委派（灰线）。向左是宿主应用（Host Application，business policy）的两个 SPI（Service Provider Interface，框架留给业务实现的扩展点）：RateLimitRequestResolver 负责 resolve requestKey + specs，即解析本次请求按哪个键、哪些限流规格来限；PostCounter 负责 count POST dimensions，即响应后的计量维度。向下左是限流判定接口 BurstRateLimiter（标注 dual bucket，双桶设计），有两个实现：Bucket4jBurstRateLimiterImpl（local、in-memory 内存版）与 RedisBurstRateLimiterImpl（redis、distributed 分布式版），后者通过 Lua eval 在 Redis 中原子判定。向下右是缓冲队列接口 BurstRequestQueue，默认实现 RocketMQBurstRequestQueueImpl（标注 SmartLifecycle 管理启停），经 produce/consume 对接 RocketMQ；enqueue / dequeue 箭头表示入队与出队回调回到过滤器。左下 Legend 说明四种线型：request path、reject / timeout response、delegates、implements，并注明 limiter 可通过配置项 gateway.burst.limiter 在 local / redis 间切换。图下方一句话总结分工：业务方只需实现 Resolver / PostCounter 两个 SPI，其余由插件自动装配。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p58">
+    <h2><span class="pageno">第 58 页</span>五项能力，开箱即用</h2>
+    <figure><img src="assets/p058.png" alt="第 58 页：通用限流插件的五项关键能力" loading="lazy"></figure>
+    <div class="explain">
+      <p>五张卡片列出插件的关键能力。1 削峰不阻塞：排队全异步，不拖垮网关事件循环（事件循环是网关处理所有请求的异步调度线程，一旦被阻塞会影响整机请求）。2 多维度同时限流：按用户、API、IP 等多维度原子管控。3 按结果计量：支持响应后按流量 / 行数计数，而不是只按请求数计数。4 单机/分布式：内存版与 Redis 版可插拔切换。5 一键集成：以 Spring Boot Starter 交付，引入依赖即可使用。页面底部点明定位：这是一个通用化的插件，而非百炼专用代码——案例中的能力被沉淀为任何 Spring Cloud Gateway 业务都可复用的组件。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r3-p59">
+    <h2><span class="pageno">第 59 页</span>结尾页：THANK YOU</h2>
+    <figure><img src="assets/p059.png" alt="第 59 页：THANK YOU 结尾页" loading="lazy"></figure>
+    <div class="explain">
+      <p>结尾致谢页，仅含 THANK YOU 与报告主题"RocketMQ LiteTopic · 实践案例"，无新增信息点。</p>
+    </div>
+  </section>
+
+  <section class="takeaways">
+    <h2>要点回顾</h2>
+    <ul>
+      <li>LiteTopic 仍是发布/订阅模型，差异在四个特性：运行时动态创建与销毁、20 万至千万级规模加 TTL 自动回收（传统商业实例上限 3,000）、客户端级差异化订阅、单队列天然 FIFO 且可选拆分换并发。</li>
+      <li>平滑限流把"放行/拒绝"两态改为 PASS/QUEUE/REJECT 三态：突发请求先入队缓冲、按基础速率放行，排满才拒绝，用异步队列削峰填谷。</li>
+      <li>传统 Topic 的隔离单元是队列，多用户消息混排导致队头阻塞，被迫为每个用户+模型开独立 Topic/Group 与独立消费集群，成本高且无法合池；LiteTopic 以"一个用户一条队列 + 按队列 Suspend 挂起 + 精准订阅"把隔离与控速下沉到队列自身。</li>
+      <li>百炼落地效果：限流异常比例下降 10×，用户可感知问题收敛，资源合池。</li>
+      <li>方案最终抽象为通用插件 spring-cloud-gateway-rocketmq-ratelimiter：业务只实现 Resolver / PostCounter 两个 SPI，削峰不阻塞、多维度限流、按结果计量、单机/分布式可插拔、Spring Boot Starter 一键集成。</li>
+    </ul>
+  </section>
+
+  <section class="refs">
+    <h2>参考资料</h2>
+    <ul>
+      <li><a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区：Agent 开源开发者沙龙回顾</a> — 官方摘要：LiteTopic 四特性与百炼平滑限流、限流异常比例下降 10 倍、通用限流插件三要点。</li>
+      <li><a href="https://www.alibabacloud.com/blog/model-studio-gateway-in-practice-using-rocketmq-litetopic-to-cut-the-throttling-ratio-by-10%C3%97_603607" target="_blank" rel="noopener">Alibaba Cloud Blog: Model Studio Gateway in Practice — Using RocketMQ LiteTopic to Cut the Throttling Ratio by 10×</a> — 百炼网关案例原文：自动创建、TTL 回收、Suspend N 语义、userId+model 维度队列。</li>
+      <li><a href="https://developer.aliyun.com/article/1761936" target="_blank" rel="noopener">阿里云开发者社区：RocketMQ LiteTopic 技术文章</a> — 单 Broker 百万级队列、差异化订阅与 Suspend 语义的技术细节。</li>
+      <li><a href="https://www.alibabacloud.com/zh/solution/tech-solution/rocketmq-for-multi-agent-communication" target="_blank" rel="noopener">RocketMQ for AI 方案页</a> — LiteTopic 面向海量短生命周期会话的整体方案定位。</li>
+    </ul>
+  </section>
+</div>
+<div class="report-panel" id="report-4">
+  <header class="report-head">
+    <h1>LoongSuite Pilot：让每一个 AI Coding Agent 可观测、可评估、可审计</h1>
+    <p class="meta">讲师：石木（陈扬，阿里云可观测团队） · 智能体构建与进化——Agent 开源开发者沙龙 · 原 PDF 第 60–82 页，共 23 页</p>
+  </header>
+
+  <section class="overview">
+    <h2>全局理解：这个报告在讲什么</h2>
+    <p>这个报告针对一块盲区：AI Coding Agent（运行在开发者本机、自主完成编程任务的 AI 智能体，如 Claude Code、Cursor）已成为日常工具，但它们的行为数据散落在各家软件的本地文件与数据库里，传统可观测手段只覆盖主机和服务端，覆盖不到开发者桌面，于是团队答不出"每天消耗多少 Token、哪个 Agent 适合哪类任务、输出出错时中间经历了什么"这类基本问题。LoongSuite Pilot 的答案是一个跑在本机或容器里的轻量采集器：一行命令安装，自动发现已安装的 Agent 并部署 Hook，把各家原始活动数据按 OpenTelemetry GenAI 语义规范归一化为统一事件，组织成 Session→Turn→Step 的层级化链路，脱敏后并行输出到 SLS、OTLP 等多种后端。有了数据才能做四件事：AI 编程 ROI 度量、多 Agent 选型对比、Token 黑洞识别、操作审计。报告按六章推进：盲区与三层困难（61–64 页）、一分钟安装与 Token 定位案例（65–67 页）、架构与五个设计选择（68–73 页）、四大数据场景加选型评测与安全审计（74–78 页）、开源生态与路线图（79–82 页）。项目已开源，见 <a href="https://github.com/alibaba/loongsuite-pilot" target="_blank" rel="noopener">GitHub 仓库</a> 与 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云官方沙龙回顾</a>。</p>
+  </section>
+
+  <details class="page-toc">
+    <summary>逐页目录（点击跳转）</summary>
+    <ol>
+      <li><a href="#r4-p60">第 60 页 · 标题页：LoongSuite Pilot</a></li>
+      <li><a href="#r4-p61">第 61 页 · 章节页 01：可观测性的盲区</a></li>
+      <li><a href="#r4-p62">第 62 页 · 当 AI Coding Agent 成为日常工具：四个答不出的问题</a></li>
+      <li><a href="#r4-p63">第 63 页 · 章节页 02：为什么这件事难做</a></li>
+      <li><a href="#r4-p64">第 64 页 · 三层困难：行为难观测、数据割裂、端侧盲区</a></li>
+      <li><a href="#r4-p65">第 65 页 · 章节页 03：1 分钟跑通全流程</a></li>
+      <li><a href="#r4-p66">第 66 页 · 一行命令安装，数据自动采集</a></li>
+      <li><a href="#r4-p67">第 67 页 · Trace 数据使用案例：Token 问题定位</a></li>
+      <li><a href="#r4-p68">第 68 页 · 章节页 04：LoongSuite Pilot 的解决思路</a></li>
+      <li><a href="#r4-p69">第 69 页 · LoongSuite Pilot 架构总览</a></li>
+      <li><a href="#r4-p70">第 70 页 · 选择一：ALL IN ONE 架构</a></li>
+      <li><a href="#r4-p71">第 71 页 · 选择二：多 Agent 采集矩阵</a></li>
+      <li><a href="#r4-p72">第 72 页 · 选择三：统一语义规范</a></li>
+      <li><a href="#r4-p73">第 73 页 · 选择四 &amp; 五：安全脱敏 + 多目标输出</a></li>
+      <li><a href="#r4-p74">第 74 页 · 章节页 05：数据能回答什么问题</a></li>
+      <li><a href="#r4-p75">第 75 页 · 有了数据之后：四个最重要的场景</a></li>
+      <li><a href="#r4-p76">第 76 页 · Agent 选型实践：Claude Code vs QoderCLI</a></li>
+      <li><a href="#r4-p77">第 77 页 · 评测结果：质量全部达标、效率各有所长</a></li>
+      <li><a href="#r4-p78">第 78 页 · 安全审计：六层体系从管理到追溯</a></li>
+      <li><a href="#r4-p79">第 79 页 · 章节页 06：开源与社区</a></li>
+      <li><a href="#r4-p80">第 80 页 · LoongSuite 可观测生态定位</a></li>
+      <li><a href="#r4-p81">第 81 页 · ROADMAP &amp; CONTRIBUTING</a></li>
+      <li><a href="#r4-p82">第 82 页 · THANKS 结尾页</a></li>
+    </ol>
+  </details>
+
+  <section class="slide" id="r4-p60">
+    <h2><span class="pageno">第 60 页</span>标题页：LoongSuite Pilot</h2>
+    <figure><img src="assets/p060.png" alt="第 60 页：标题页 LoongSuite Pilot" loading="lazy"></figure>
+    <div class="explain">
+      <p>报告标题页。讲师石木（陈扬）来自阿里云可观测团队，主题是"LoongSuite Pilot：让每一个 AI Coding Agent 可观测、可评估、可审计"。标题里的三个动词就是全篇的价值主线：先看见 Agent 的行为（可观测），再比较行为的效果（可评估），最后能回查行为的责任（可审计）。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p61">
+    <h2><span class="pageno">第 61 页</span>章节页 01：可观测性的盲区</h2>
+    <figure><img src="assets/p061.png" alt="第 61 页：章节页 01 可观测性的盲区" loading="lazy"></figure>
+    <div class="explain">
+      <p>第一章分隔页，编号 01，标题"可观测性的盲区"，副标题"AI Coding Agent 时代，我们答不出的问题"。作用是先立问题：不急着讲产品，而是列出当前观测体系回答不了的问题清单。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p62">
+    <h2><span class="pageno">第 62 页</span>当 AI Coding Agent 成为日常工具：四个答不出的问题</h2>
+    <figure><img src="assets/p062.png" alt="第 62 页：四个答不出的基本问题" loading="lazy"></figure>
+    <div class="explain">
+      <p>页面用四张问号卡片列出团队用上 AI Coding Agent 后无从回答的基本问题：团队每天消耗了多少 Token（Token 是模型计量文本与计费的基本单位）；哪些任务适合 Agent、哪种任务适合哪个 Agent；Agent 输出不符预期时中间经历了什么；Agent 修改了 30 个文件时完整链路是什么。四个问题分别对应成本、选型、调试、审计四种诉求。页底把技术问题上升为经营问题：企业月投入数万到数十万，却无法量化"这笔钱值不值"。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p63">
+    <h2><span class="pageno">第 63 页</span>章节页 02：为什么这件事难做</h2>
+    <figure><img src="assets/p063.png" alt="第 63 页：章节页 02 为什么这件事难做" loading="lazy"></figure>
+    <div class="explain">
+      <p>第二章分隔页，编号 02，标题"为什么这件事难做"，副标题"困难来自三个层面"。承上启下：问题清单已经摆出，下一章解释为什么现有手段解决不了。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p64">
+    <h2><span class="pageno">第 64 页</span>三层困难：行为难观测、数据割裂、端侧盲区</h2>
+    <figure><img src="assets/p064.png" alt="第 64 页：AI 编程 Agent 可观测性的三层困难" loading="lazy"></figure>
+    <div class="explain">
+      <p>三栏卡片给出三层困难。第一栏"Agent 行为天然难观测"：一次任务有 10+ 轮 ReAct 循环（ReAct 指"推理一步、执行一个工具、看结果再决定下一步"的循环范式），每轮涉及模型调用、工具执行、结果反思与决策，传统 MLT（Metrics 指标、Logs 日志、Traces 链路三件套）无法还原决策流程。第二栏"多 Agent 数据天然割裂"：每个 Agent 的数据格式不同（JSON / SQLite / 文本），存储位置、粒度、语义各异，无法规模化横向对比。第三栏"端侧是可观测的盲区"：主机/容器有 LoongCollector 覆盖、服务端框架有语言探针覆盖，唯独开发者桌面无覆盖。页底给出全篇的核心问题与设计约束：如何在不改造 Agent 的前提下，从端侧获取完整、统一、可靠的行为数据。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p65">
+    <h2><span class="pageno">第 65 页</span>章节页 03：1 分钟跑通全流程</h2>
+    <figure><img src="assets/p065.png" alt="第 65 页：章节页 03 1 分钟跑通全流程" loading="lazy"></figure>
+    <div class="explain">
+      <p>第三章分隔页，编号 03，标题"1 分钟跑通全流程"，副标题"从安装到效果展示"。接下来两页分别是安装演示和一个真实的 Trace 使用案例，先给直观效果再讲架构。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p66">
+    <h2><span class="pageno">第 66 页</span>一行命令安装，数据自动采集</h2>
+    <figure><img src="assets/p066.png" alt="第 66 页：一行命令安装与三步流程" loading="lazy"></figure>
+    <div class="explain">
+      <p>页面上方是一条终端安装命令：用 curl 拉取 loongsuite-pilot 的 installer.sh 安装脚本并交给 bash 执行，参数里指定 SLS（阿里云日志服务）的 endpoint、project、logstore 以及 AccessKey ID/Secret 凭据，即安装的同时就配好了数据上报目的地。命令之后是三步卡片：01 自动部署——下载、安装 Hook（Hook 是 Agent 软件预留的回调挂载点，外部脚本挂上去就能在关键事件发生时拿到行为数据）、启动后台进程；02 静默采集——开发者正常使用 Agent，Pilot 在后台运行，不改变工作习惯；03 本地 Dashboard——执行 loongsuite-pilot monitor start 打开本地看板查看采集效果。页底标注"实际演示"，说明这一节在沙龙现场做了 live demo。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>阿里云官方接入文档给出了当前支持的 Agent 列表、安装方式与脱敏配置项，可与本页命令对照：<a href="https://help.aliyun.com/zh/agentloop/ai-application-access-ai-coding-agent/" target="_blank" rel="noopener">AI 应用接入 AI Coding Agent（阿里云帮助中心）</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p67">
+    <h2><span class="pageno">第 67 页</span>Trace 数据使用案例：Token 问题定位</h2>
+    <figure><img src="assets/p067.png" alt="第 67 页：Trace 控制台截图演示 Token 问题定位" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页是一张可观测控制台的真实截图（Trace 指一次任务的完整调用链路），演示拿到数据后如何定位 Token 消耗问题。截图顶部是 claude-code 这个 AI Agent 实体的"链路追踪"页签，会话级汇总显示：开始时间 2026-06-30 01:30:03、耗时 2min 13s、Agents 数 1、总 Token 消耗 606671、LLM 调用 26 次、工具调用 36 次，并排给出会话 ID 与用户 ID。左侧调用树按 ENTRY → AGENT → STEP（react step，round:1）→ LLM / TOOL 逐层展开：红圈标出 agent 节点上的 total tokens:1213342，以及其中一次 chat claude-opus-4-6 调用上的 total tokens:3551，两个数字的对照就是"从总量下钻到单次调用"的定位动作；树下还列着多次 execute_tool Bash 及各自耗时。右侧详情面板显示该 span 的耗时 133.75s、状态成功、Input Tokens 1201840，并展开原始输入消息；红框圈出的输入内容旁标注"定位具体任务和数字员工"——消息文本说明这次运行由 Autopilot 定时任务触发，目标是扫描 Aone 中带 [HARNESS-AUTO] [Go Agent] 标记的工作项并交给"Go Agent 开发小队"实现。整页展示的用法是：会话总量 → 沿调用树逐层下钻到具体 span → 打开该 span 的输入原文，确认是哪个任务、哪一轮的输入吃掉了 Token。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p68">
+    <h2><span class="pageno">第 68 页</span>章节页 04：LoongSuite Pilot 的解决思路</h2>
+    <figure><img src="assets/p068.png" alt="第 68 页：章节页 04 解决思路" loading="lazy"></figure>
+    <div class="explain">
+      <p>第四章分隔页，编号 04，标题"LoongSuite Pilot 的解决思路"，副标题"架构 + 五个关键设计选择"。后面五页先给一张架构总览，再逐一展开五个设计选择。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p69">
+    <h2><span class="pageno">第 69 页</span>LoongSuite Pilot 架构总览</h2>
+    <figure><img src="assets/p069.png" alt="第 69 页：LoongSuite Pilot 架构总览图" loading="lazy"></figure>
+    <div class="explain">
+      <p>架构总览图自上而下是一条数据流水线。最上层是 AI Coding Agents 的原始数据源：IDE 历史文件、SQLite 数据库（轻量嵌入式数据库）、Hook JSONL 日志（JSONL 即每行一个 JSON 对象的文本格式）、Session 日志、Patch 拦截输出等。Pilot 内部第一层 Discovery + Deployment：AgentDiscoveryService 用 fs.watch 文件监听加轮询发现已安装 Agent，DeploymentManager 按 4 种策略自动注入，agents.d/*.json 是声明式配置。第二层 Input Layer（InputManager）按数据源配五种输入：HookInput 做 JSONL 增量读取、IdeInput 取 IDE 快照、SqliteInput 用 rowid 游标增量查询（rowid 是 SQLite 每行的自增编号，记住读到的位置即可只读新增）、SessionInput 轮询会话文件、CliForwarder 转发 CLI 遥测。第三层 Processing 做四件事：Normalization 把原始数据归一化为统一的 AgentActivityEntry、Content Policy 按 Agent 控制采集粒度、Masking 对 AK/Key/URI/私钥脱敏、Git Enrichment 关联 repo 与 branch。第四层 MultiFlusher 并行扇出到四个输出：SLS Logstore（生产实时查询）、本地 JSONL（零依赖调试）、HTTP Endpoint（对接自建后端）、OTLP Trace（OTLP 是 OpenTelemetry 的传输协议，对接 CMS 2.0 / Jaeger / Langfuse）。右侧独立的 Checkpoint 栏保障可靠性：StateStore 持久化读取偏移（input-state.json）、SnapshotStore 做快照去重（snapshot-store.json），合起来实现断点续采、不丢不重。框内底边是运维能力条：HookWatchdog、AutoUpdater、Metrics、StatusBar、LogRetention。框外底部是存储与分析后端：阿里云 SLS、CMS 2.0 / Langfuse、本地 JSONL、自建后端。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>这套"端侧采集归一化 + 多协议输出"的思路在云栖大会相关文章中被放在 AgenticOps 采集标准化的脉络里介绍：<a href="https://www.cnblogs.com/alisystemsoftware/p/23373697" target="_blank" rel="noopener">阿里云系统软件博客：AgenticOps 采集标准化</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p70">
+    <h2><span class="pageno">第 70 页</span>选择一：ALL IN ONE 架构</h2>
+    <figure><img src="assets/p070.png" alt="第 70 页：ALL IN ONE 声明驱动部署图" loading="lazy"></figure>
+    <div class="explain">
+      <p>第一个设计选择：一次部署、一个二进制，自动覆盖所有已安装的 AI Coding Agent。图自上而下：Pilot 读取 agents.d/ 目录下每个 Agent 一份的 JSON 声明（claude-code、cursor、codex、qoder、qoder-work、wukong、qwen-code-cli 等）；DeploymentManager 做声明驱动部署，提供 HookStrategy、PluginProbe、PluginInject、DetectionOnly 四种策略，并由 HookManager + HookWatchdog 负责自愈（Hook 被破坏或失效时自动修复）。底部七张 Agent 卡片各带一个激活绿点并标注采集方式：Cursor、Claude Code、Codex 走 Hook，Qoder 走 IDE，Qoder Work 走 SQLite，Wukong 走 Session，Qwen Code CLI 走 CLI。关键数字与机制：已声明 11 个 Agent，运行时按实际检测结果激活——声明是全集，装了哪个才激活哪个。页底结论：新增一个 Agent 适配 = 一个 JSON 声明 + 一个 Input 实现，无需改框架代码。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p71">
+    <h2><span class="pageno">第 71 页</span>选择二：多 Agent 采集矩阵</h2>
+    <figure><img src="assets/p071.png" alt="第 71 页：五种采集基类与多 Agent 的组合矩阵" loading="lazy"></figure>
+    <div class="explain">
+      <p>第二个设计选择用"5 种采集基类 × 多种 Agent = 全覆盖"的矩阵表达。左列五个基类各封装一种数据源读法：BaseHookInput（Hook JSONL 日志增量读取）、BaseIdeInput（IDE 历史文件快照轮询）、BaseSqliteInput（SQLite rowid 游标增量查询）、BaseSessionInput（Session 文件轮询）、BaseCliForwarder（CLI 遥测日志转发）。右列是每个 Agent 实际使用的组合：Cursor 仅 Hook 注入；Claude Code 与 Codex 为 Hook + Node.js 启动项注入；Qoder 组合 IDE 快照 + Hook + Session 三种；Qoder Work 组合 SQLite + Hook；虚线框列出 OpenClaw / Gemini CLI / Cline 等待扩展对象。图中连线表示复用关系，例如 Hook 基类同时被 Cursor、Claude Code、Codex 复用，IDE 与 Session 基类的线都汇到 Qoder。页底给出扩展成本：新增 Agent 只需继承基类 + 编写 agents.d/*.json 声明文件 + 实现数据转换方法。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p72">
+    <h2><span class="pageno">第 72 页</span>选择三：统一语义规范</h2>
+    <figure><img src="assets/p072.png" alt="第 72 页：Session→Turn→Step→LLM/Tool 层级与三个收益" loading="lazy"></figure>
+    <div class="explain">
+      <p>第三个设计选择：统一语义规范，基于 OpenTelemetry GenAI Semantic 与 OTEL GenAI Util SDK。OpenTelemetry（OTel）是可观测性开源标准，GenAI Semantic Conventions 是它针对生成式 AI 场景约定的字段命名与语义。页面上方给出四层链路：Session → Turn → Step → LLM / Tool，即一个会话包含多轮对话，每轮包含多个步骤，每个步骤落到一次模型调用或工具执行。下方三张卡片是统一语义带来的三个收益：口径对齐——所有 Agent 使用相同字段名和语义定义，如 gen_ai.usage.input_tokens、gen_ai.session.id；层级化链路——还原 Agent 完整执行链路，看清每一轮 ReAct 循环的思考→工具调用→推理；基础设施复用——接入新 Agent 时看板、告警、分析查询自动生效，无需重新开发。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p73">
+    <h2><span class="pageno">第 73 页</span>选择四 &amp; 五：安全脱敏 + 多目标输出</h2>
+    <figure><img src="assets/p073.png" alt="第 73 页：安全脱敏与多目标输出两栏" loading="lazy"></figure>
+    <div class="explain">
+      <p>左栏是选择四"安全脱敏"，主张灵活粒度、平衡观测与安全：采集粒度控制可按 Agent 类型配置是否采集消息内容、工具参数；敏感信息自动脱敏把云 AK、API Key、数据库连接串、私钥分别替换为 [ACCESSKEY_MASKED]、[APIKEY_MASKED]、[DATABASEURL_MASKED]、[PRIVATEKEY_MASKED] 占位符；mask.mode 提供 none / all / custom 三种模式。右栏是选择五"多目标输出，不绑定后端"：本地 JSONL（零依赖落盘、本地调试）、SLS Logstore（生产级实时查询）、HTTP Endpoint（对接自建后端）、OTLP Trace（CMS 2.0 / Jaeger / Langfuse，其中 Jaeger 是开源分布式追踪系统、Langfuse 是开源 LLM 观测平台）。右栏底部的工程约束很重要：并行扇出，单个目标失败不阻塞其他通道。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方沙龙回顾把"安全脱敏 + 多目标输出"列为该方案的要点之一；脱敏的具体配置项见 <a href="https://help.aliyun.com/zh/agentloop/ai-application-access-ai-coding-agent/" target="_blank" rel="noopener">阿里云接入文档</a>，要点摘要见 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">沙龙回顾文章</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p74">
+    <h2><span class="pageno">第 74 页</span>章节页 05：数据能回答什么问题</h2>
+    <figure><img src="assets/p074.png" alt="第 74 页：章节页 05 数据能回答什么问题" loading="lazy"></figure>
+    <div class="explain">
+      <p>第五章分隔页，编号 05，标题"数据能回答什么问题"，副标题"四个以前回答不了的关键问题"。呼应开篇的问题清单，本章讲采集到的数据支撑哪些分析场景。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p75">
+    <h2><span class="pageno">第 75 页</span>有了数据之后：四个最重要的场景</h2>
+    <figure><img src="assets/p075.png" alt="第 75 页：ROI、选型、Token 黑洞、审计四个场景" loading="lazy"></figure>
+    <div class="explain">
+      <p>四张卡片给出四个场景。其一"AI 编程的 ROI 如何度量"（ROI 即投入产出比）：传统指标失效，需要任务完成率、Token 效率比、人机协作比等新维度，配合全链路 Trace 树 Top-down（自顶向下）排查。其二"多 Agent 并存，选型靠什么"：不同 Agent 有不同的"甜蜜区"（各自擅长的任务类型），靠统一 schema（数据字段结构）横向对比 Token 效率、成功率、时长。其三"Token 花得多就是效果好吗"：Token 消耗与质量非线性，识别"Token 黑洞"等于发现能力瓶颈，手段是多维聚合 + 缓存命中率评估。其四"AI Agent 的操作谁来审计"：Agent 是大规模拥有写入权限的非人类实体，路径为行为分析→风险评分→会话追溯。页底结论：每个场景背后都需要完整、统一、可靠的 Agent 行为数据作为基础设施。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p76">
+    <h2><span class="pageno">第 76 页</span>Agent 选型实践：Claude Code vs QoderCLI</h2>
+    <figure><img src="assets/p076.png" alt="第 76 页：选型评测设计与 8 道考题矩阵" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出一次真实的选型评测设计，原则是"相同考题、相同准出条件、Trace 数据后台自动采集，无人工干预"。左列五项：考生为 Claude Code (opus-4-6) vs QoderCLI (Ultimate)；考题为 8 道复杂编程任务，覆盖实现/修复/编译/并发/重构/迁移；准出为每题 22–32 个预写单元测试必须全部 PASS；采集为 LoongSuite-Pilot 后台自动采 Trace，零埋点零改码；执行方式为 claude --print / qodercli -p 非交互一次性执行，npx vitest run 自动验证（vitest 是 JS/TS 单元测试框架），再根据 session 提取数据分析生成报告。右表是 8 道考题矩阵，每题预写测试数即准出线：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="border:1px solid #e5e7eb;padding:6px 10px">#</th><th style="border:1px solid #e5e7eb;padding:6px 10px">类型</th><th style="border:1px solid #e5e7eb;padding:6px 10px">任务内容</th><th style="border:1px solid #e5e7eb;padding:6px 10px">单测数</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T1</td><td style="border:1px solid #e5e7eb;padding:6px 10px">多模块实现</td><td style="border:1px solid #e5e7eb;padding:6px 10px">EventBus（核心+中间件+通配符+异步）</td><td style="border:1px solid #e5e7eb;padding:6px 10px">22</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T2</td><td style="border:1px solid #e5e7eb;padding:6px 10px">跨文件 Bug 修复</td><td style="border:1px solid #e5e7eb;padding:6px 10px">4 文件中 12 个跨调用链 bug</td><td style="border:1px solid #e5e7eb;padding:6px 10px">32</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T3</td><td style="border:1px solid #e5e7eb;padding:6px 10px">编译器实现</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Markdown → HTML 转换器</td><td style="border:1px solid #e5e7eb;padding:6px 10px">32</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T4</td><td style="border:1px solid #e5e7eb;padding:6px 10px">并发系统</td><td style="border:1px solid #e5e7eb;padding:6px 10px">DAG 调度（拓扑排序+超时+失败级联）</td><td style="border:1px solid #e5e7eb;padding:6px 10px">26</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T5</td><td style="border:1px solid #e5e7eb;padding:6px 10px">API 设计</td><td style="border:1px solid #e5e7eb;padding:6px 10px">链式 SQL 查询构建器（不可变）</td><td style="border:1px solid #e5e7eb;padding:6px 10px">22</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T6</td><td style="border:1px solid #e5e7eb;padding:6px 10px">重构+扩展</td><td style="border:1px solid #e5e7eb;padding:6px 10px">单体 Logger → 插件架构</td><td style="border:1px solid #e5e7eb;padding:6px 10px">28</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T7</td><td style="border:1px solid #e5e7eb;padding:6px 10px">代码迁移</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Callback → async/await</td><td style="border:1px solid #e5e7eb;padding:6px 10px">25</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">T8</td><td style="border:1px solid #e5e7eb;padding:6px 10px">代码生成</td><td style="border:1px solid #e5e7eb;padding:6px 10px">JSON Schema → TS 类型 + 校验器</td><td style="border:1px solid #e5e7eb;padding:6px 10px">26</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p77">
+    <h2><span class="pageno">第 77 页</span>评测结果：质量全部达标、效率各有所长</h2>
+    <figure><img src="assets/p077.png" alt="第 77 页：评测结果汇总对比与 Trace 洞察" loading="lazy"></figure>
+    <div class="explain">
+      <p>副标题强调：426 次单元测试 100% PASS，效率差异全部由 Pilot 的 OTLP Trace 直接提取。顶部三张大数卡片：质量维度 213 × 2 = 426，预写测试全部通过、双方 100% PASS、质量打平；Token 消耗 2.03×，Claude Code 4.4M vs QoderCLI 2.1M，QoderCLI 省 51%；端到端速度 ×0.61，Claude Code 967s vs QoderCLI 1593s，Claude 快 39%。左下汇总表按 8 个任务合计、数据来源为 LoongSuite-Pilot OTLP Trace 并按 gen_ai.session.id 聚合：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="border:1px solid #e5e7eb;padding:6px 10px">指标</th><th style="border:1px solid #e5e7eb;padding:6px 10px">Claude Code</th><th style="border:1px solid #e5e7eb;padding:6px 10px">QoderCLI</th><th style="border:1px solid #e5e7eb;padding:6px 10px">优势方</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">LLM 请求次数</td><td style="border:1px solid #e5e7eb;padding:6px 10px">78</td><td style="border:1px solid #e5e7eb;padding:6px 10px">66</td><td style="border:1px solid #e5e7eb;padding:6px 10px">QoderCLI</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">ReAct 轮次</td><td style="border:1px solid #e5e7eb;padding:6px 10px">78</td><td style="border:1px solid #e5e7eb;padding:6px 10px">66</td><td style="border:1px solid #e5e7eb;padding:6px 10px">QoderCLI</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">工具调用次数</td><td style="border:1px solid #e5e7eb;padding:6px 10px">70</td><td style="border:1px solid #e5e7eb;padding:6px 10px">75</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Claude Code</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">Total Tokens</td><td style="border:1px solid #e5e7eb;padding:6px 10px">4.4M</td><td style="border:1px solid #e5e7eb;padding:6px 10px">2.1M</td><td style="border:1px solid #e5e7eb;padding:6px 10px">QoderCLI</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">LLM 总耗时</td><td style="border:1px solid #e5e7eb;padding:6px 10px">848.8s</td><td style="border:1px solid #e5e7eb;padding:6px 10px">1531.0s</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Claude Code</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">端到端总耗时</td><td style="border:1px solid #e5e7eb;padding:6px 10px">966.9s</td><td style="border:1px solid #e5e7eb;padding:6px 10px">1593.0s</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Claude Code</td></tr>
+      </table>
+      <p>右上"单任务效率均值"：平均端到端 120.9s vs 199.1s（Claude 快 39%）、平均推理 106.1s vs 191.4s（Claude 单次更快）、平均 Token 545.3K vs 268.7K（QoderCLI 省 51%）、平均 ReAct 9.8 轮 vs 8.2 轮（QoderCLI 更精简）。右下是"Trace 才能看到的两个洞察"：T3 Markdown 编译器一题，QoderCLI 触发 max_tokens 截断续传耗时 812s，Claude 一气呵成 324s——finish_reasons=['max_tokens']（模型调用的结束原因字段）只能在 Trace 里看到；T6 插件架构重构一题，QoderCLI 24 轮小步迭代 389s，Claude 16 轮 165s——Trace 的 STEP 序列揭示"先理解后动手" vs "写-测-改"的策略差异。页底结论：Agent 选型不再靠感觉，每一次 LLM 调用、每一次工具使用、每一轮 ReAct 都成为可量化、可对比、可追溯的数据。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p78">
+    <h2><span class="pageno">第 78 页</span>安全审计：六层体系从管理到追溯</h2>
+    <figure><img src="assets/p078.png" alt="第 78 页：六张审计控制台截图组成的六层体系" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用六张控制台截图展示审计能力的六层体系，顺序是从管理视图逐层下钻到单条会话。① 审计管理总览：应用审计列表按 Agent 类型（claude-code、qoder-cli、cursor、codex、qoder-work 等）列出应用名（loongsuite-pilot-*）、最近数据时间、流量趋势与查看入口，下方还有 AI 系统运行时审计状态（主机数、运行时 Agent Type 数）。② 风险态势大盘：概览卡给出高危事件 2669、中危事件 5699、低危事件 512、敏感事件 5187 等计数，下方"今日优先风险队列"按严重度列出风险事件及其影响范围（sessions/events 数），右侧是信号分级概览条形图。③ 风险主体定位：按应用、用户、主机、Tool、Domain/IP、命令六个维度各排 Top 3，命令维度可见 Shell 管道执行、sudo、重定向等高风险命令类型。④ 数据泄露分析：敏感信号概览（外传风险、敏感上下文 149、外传命中）、敏感信号统计（835 / 695 / 1688）、攻击链操作链链路与敏感上下文泄露链路图、敏感数据类型分布与泄露发现队列。⑤ 实体关联调查：把应用、主机实例、用户、会话、Tool、Skill、外联域名、目的/来源 IP、AK/Secret、文件路径、命令行可执行文件、Shell 结构、敏感数据模式等实体类型做成卡片（各带总数、风险信号数、关联事件数），下方实体清单与实体类型概览支持跨实体关联调查。⑥ 会话级风险追溯：会话浏览汇总会话数 515、Event 数 50.1K、Turn 数 1530、Step 数 11.3K、LLM Request 12.9K、Input Tokens 663M、Output Tokens 4.60M 等指标，会话列表可点进单个会话查看事件明细与原始事件 JSON。六层合起来回答第 75 页提出的"Agent 的操作谁来审计"：从态势到主体、到泄露、到关联、最终落到会话原文。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p79">
+    <h2><span class="pageno">第 79 页</span>章节页 06：开源与社区</h2>
+    <figure><img src="assets/p079.png" alt="第 79 页：章节页 06 开源与社区" loading="lazy"></figure>
+    <div class="explain">
+      <p>第六章分隔页，编号 06，标题"开源与社区"，副标题"LoongSuite Pilot 正式开源"。宣布项目开源，后两页讲它在可观测生态中的位置和社区参与方式。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p80">
+    <h2><span class="pageno">第 80 页</span>LoongSuite 可观测生态定位</h2>
+    <figure><img src="assets/p080.png" alt="第 80 页：LoongSuite 三列采集生态与后端" loading="lazy"></figure>
+    <div class="explain">
+      <p>生态定位图分三列对照：端侧 AI 编程 Agent（Cursor、Claude Code、Codex）由 LoongSuite Pilot 采集；服务端 AI Agent（Dify、AgentScope、LangChain）由 Python / Go / Java Agent 做服务端框架无侵入采集；基础设施（主机、K8s）由 LoongCollector 覆盖主机/容器/eBPF（eBPF 是 Linux 内核级的无侵入观测技术）。三层采集统一走中间的多协议输出带：OTLP、SLS Protocol、HTTP、本地文件。底部对接四类后端：阿里云 SLS（实时查询）、CMS 2.0（链路追踪）、Grafana（可视化）、ES（全文检索，即 Elasticsearch）。页底结论：LoongSuite Pilot 补齐了 AI Agent 可观测在端侧的一块拼图——服务端和基础设施早有采集器，缺的正是开发者桌面这一层。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p81">
+    <h2><span class="pageno">第 81 页</span>ROADMAP &amp; CONTRIBUTING</h2>
+    <figure><img src="assets/p081.png" alt="第 81 页：路线图、三种参与方式与社群二维码" loading="lazy"></figure>
+    <div class="explain">
+      <p>三栏社区页。左栏"下一步计划"三项：更多 Agent（新 agent 露头即秒适配）、开箱即用分析看板（效率度量 + 成本分析 Dashboard）、社区 Agent 贡献模板（标准化的第三方 Agent 适配流程）。中栏"三种参与方式"：提 Issue（报 Bug、提新 Agent 适配需求）、贡献 Agent 适配（参考 agents.d/ 声明文件和已有实现）、分享实践（把使用经验和分析洞察分享到社区）。右栏是钉钉群与微信群两个二维码入口。底部横幅点题：端侧可观测，需要全社区一起建。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r4-p82">
+    <h2><span class="pageno">第 82 页</span>THANKS 结尾页</h2>
+    <figure><img src="assets/p082.png" alt="第 82 页：THANKS 结尾页" loading="lazy"></figure>
+    <div class="explain">
+      <p>结尾页给出全报告的收束判断："可观测性是让 AI Agent 从'能用'走向'好用'的关键基础设施"，并留下开源地址 github.com/alibaba/loongsuite-pilot 与讲师信息（石木/陈扬，阿里云可观测团队），供听众会后取用代码与联系作者。</p>
+    </div>
+  </section>
+
+  <section class="takeaways">
+    <h2>要点回顾</h2>
+    <ul>
+      <li>端侧（开发者桌面）是 AI Coding Agent 可观测的盲区：行为难观测、多 Agent 数据割裂、传统采集不覆盖桌面；Pilot 的设计约束是"不改造 Agent"。</li>
+      <li>ALL IN ONE + 声明驱动：一个二进制自动发现并覆盖已安装 Agent（已声明 11 个、按检测激活），新增适配 = 一个 JSON 声明 + 一个 Input 实现，不改框架代码。</li>
+      <li>统一语义是横向可比的前提：基于 OTel GenAI 语义约定与 Session→Turn→Step→LLM/Tool 层级链路对齐口径，看板、告警、查询随新 Agent 接入自动复用。</li>
+      <li>数据回答四个问题：ROI 度量、多 Agent 选型、Token 黑洞识别、操作审计。实测中 Claude Code 与 QoderCLI 质量打平（426 次测试 100% PASS），QoderCLI 省 51% Token、Claude 快 39%，差异原因只能从 Trace 中看到。</li>
+      <li>工程治理配套：按 Agent 的采集粒度控制 + 四类敏感信息自动脱敏、多目标并行扇出且单通道失败不阻塞、Checkpoint 断点续采做到不丢不重。</li>
+    </ul>
+  </section>
+
+  <section class="refs">
+    <h2>参考资料</h2>
+    <ul>
+      <li><a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区：Agent 开源开发者沙龙回顾</a> — 本报告要点的官方摘要：三大痛点、一行命令部署、四大数据问题。</li>
+      <li><a href="https://github.com/alibaba/loongsuite-pilot" target="_blank" rel="noopener">alibaba/loongsuite-pilot（GitHub）</a> — 项目开源仓库与安装入口。</li>
+      <li><a href="https://help.aliyun.com/zh/agentloop/ai-application-access-ai-coding-agent/" target="_blank" rel="noopener">阿里云帮助中心：AI 应用接入 AI Coding Agent</a> — 支持的 Agent 列表、安装方式与脱敏配置。</li>
+      <li><a href="https://www.cnblogs.com/alisystemsoftware/p/23373697" target="_blank" rel="noopener">阿里云系统软件博客：AgenticOps 采集标准化</a> — 云栖大会相关背景，端侧采集归一化与多协议输出的生态脉络。</li>
+    </ul>
+  </section>
+</div>
+<div class="report-panel" id="report-5">
+  <header class="report-head">
+    <h1>基于 AgentTeams 的数字员工落地实践</h1>
+    <p class="meta">讲师：韩寅（阿里云智能技术专家） · 智能体构建与进化——Agent 开源开发者沙龙 · 原 PDF 第 83–103 页，共 21 页</p>
+  </header>
+
+  <section class="overview">
+    <h2>全局理解：这个报告在讲什么</h2>
+    <p>这是沙龙的第五个报告，回答一个问题：企业怎样把"数字员工"从单个演示机器人变成可以批量构建、标准交付、持续运营的组织能力。核心主张是"一项职能 = 一支 Agent 团队"——不是做一个执行单一动作的机器人，而是把一项完整职能（值班答疑、社区维护、应急处置、经营问数等）交给一支由 Human 触发、Leader 规划分派、多个 Worker 专业执行的可协同、可治理、可进化团队。报告脉络分五段：先讲研发组织职能类工作的痛点与范式升级（84–87 页）；再讲规模化复制的工程方法——样板间矩阵、代码组织形式、六步交付闭环（88–90 页）；然后用四个落地场景验证（91–96 页）；接着正面回答"你敢让 AI 做生产变更吗"，给出四道关卡治理链路与两段式确认机制（97–99 页）；最后回到运营本身——用 AI 运维 AI、可观测与进化回流（100–101 页），并总结组织级价值（102 页）。据<a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">官方沙龙回顾</a>，该实践已落地 7 个样板间、49 个接入团队、75 个数字员工。AgentTeams 本身已<a href="https://github.com/agentscope-ai/AgentTeams" target="_blank" rel="noopener">开源</a>，AgentCore 是阿里云在其开源能力之上提供企业级高阶能力的商业化版本。</p>
+  </section>
+
+  <details class="page-toc">
+    <summary>逐页目录（点击跳转）</summary>
+    <ol>
+      <li><a href="#r5-p83">第 83 页 · 封面：基于 AgentTeams 的数字员工落地实践</a></li>
+      <li><a href="#r5-p84">第 84 页 · 背景：研发组织的"职能类工作"之痛</a></li>
+      <li><a href="#r5-p85">第 85 页 · 核心破题思路：一项职能 = 一支 Agent 团队</a></li>
+      <li><a href="#r5-p86">第 86 页 · 从机器人到数字员工团队：范式升级</a></li>
+      <li><a href="#r5-p87">第 87 页 · AgentTeams 协同模型：Leader × Worker</a></li>
+      <li><a href="#r5-p88">第 88 页 · 规模化复制全景：数字员工团队矩阵</a></li>
+      <li><a href="#r5-p89">第 89 页 · 工程视角：样板间代码组织形式</a></li>
+      <li><a href="#r5-p90">第 90 页 · 落地流程：从定义到进化的闭环</a></li>
+      <li><a href="#r5-p91">第 91 页 · 场景一痛点：开源社区维护</a></li>
+      <li><a href="#r5-p92">第 92 页 · 开源社区维护数字员工团队</a></li>
+      <li><a href="#r5-p93">第 93 页 · 场景二：Oncall 值班与专业分诊</a></li>
+      <li><a href="#r5-p94">第 94 页 · 工单度量：工单 AI 覆盖金字塔</a></li>
+      <li><a href="#r5-p95">第 95 页 · 场景三：应急数字人协同处置</a></li>
+      <li><a href="#r5-p96">第 96 页 · 场景四：经营分析团队与自然语言问数</a></li>
+      <li><a href="#r5-p97">第 97 页 · 你敢让 AI 做生产变更吗？</a></li>
+      <li><a href="#r5-p98">第 98 页 · 可信护栏：可解释、可追溯、可拒绝</a></li>
+      <li><a href="#r5-p99">第 99 页 · 高危操作治理：两段式确认机制</a></li>
+      <li><a href="#r5-p100">第 100 页 · 用 AI 运维 AI：从管理员瓶颈到自助运营</a></li>
+      <li><a href="#r5-p101">第 101 页 · 可观测与自进化：数字员工也要被运营</a></li>
+      <li><a href="#r5-p102">第 102 页 · 落地价值：从工具提效到 AI Native 组织能力升级</a></li>
+      <li><a href="#r5-p103">第 103 页 · 结尾：THANKS / Q&amp;A</a></li>
+    </ol>
+  </details>
+
+  <section class="slide" id="r5-p83">
+    <h2><span class="pageno">第 83 页</span>封面：基于 AgentTeams 的数字员工落地实践</h2>
+    <figure><img src="assets/p083.png" alt="第 83 页：封面，基于 AgentTeams 的数字员工落地实践" loading="lazy"></figure>
+    <div class="explain">
+      <p>报告封面。顶部标签为"AGENTTEAMS · 数字员工实践"，主标题"基于 AgentTeams 的数字员工落地实践"，副标题点出核心命题："一项职能 = 一支 Agent 团队：可复制的数字员工工厂"，并列出三个关键词：批量构建、标准交付、持续运营。页脚两行进一步定调：左下角"不是单点机器人，而是方法论与工程化实践"，右下角"LEADER — WORKER 协同"。也就是说，本报告讲的不是某个机器人的功能演示，而是一套把职能整体交给 Agent 团队、并能规模化复制的工程方法论。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p84">
+    <h2><span class="pageno">第 84 页</span>背景：研发组织的"职能类工作"之痛</h2>
+    <figure><img src="assets/p084.png" alt="第 84 页：研发组织的职能类工作之痛，四张痛点卡片" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用四张卡片说明为什么需要数字员工，对象是研发组织中的"职能类工作"——值班、答疑、工单、社区维护这类必须有人承担、但又不属于核心研发主线的工作。四类痛点分别是：</p>
+      <ul>
+        <li><strong>01 重复消耗</strong>：大量工时被重复劳动吞噬。值班答疑、工单处理、社区 Issue（社区用户提交的问题单）、取数提单，日复一日消耗研发工时。</li>
+        <li><strong>02 频繁打断</strong>：碎片任务打断主线工作。碎片化请求不断插入，工程师难以持续专注于核心研发主线。</li>
+        <li><strong>03 专家单点</strong>：关键知识集中在少数人。专家成为单点瓶颈，权限只能"全有或全无"，无法安全分级下放。</li>
+        <li><strong>04 7×24 压力</strong>：响应压力不分昼夜。社区与告警不分时区、不分工作日，团队被迫 7×24 待命响应。</li>
+      </ul>
+      <p>这四条分别对应后文的解法方向：重复与打断交给数字员工承接、专家单点靠分级授权化解、7×24 压力靠全天候在线的团队响应。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p85">
+    <h2><span class="pageno">第 85 页</span>核心破题思路：一项职能 = 一支 Agent 团队</h2>
+    <figure><img src="assets/p085.png" alt="第 85 页：核心破题思路，一项职能等于一支 Agent 团队" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出全报告的总纲："我们不是在做一个孤立的机器人，而是把一项职能完整交给一支可协同、可治理、可进化的 Agent 团队。"承接单位是"职能"而不是"单个任务"，因此交付物是一支团队而非一个脚本。页面下方用三列解释这支团队必须具备的三个属性：<strong>可协同</strong>——Leader × Worker 分工，规划与执行各司其职；<strong>可治理</strong>——权限矩阵、审计追踪与安全护栏兜底；<strong>可进化</strong>——经验沉淀持续回流，越用越懂业务。这三条属性分别在后文的协同模型（87 页）、护栏治理（98–99 页）、进化回流（90、101 页）中展开。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p86">
+    <h2><span class="pageno">第 86 页</span>从机器人到数字员工团队：范式升级</h2>
+    <figure><img src="assets/p086.png" alt="第 86 页：传统脚本单点机器人与 AgentTeams 数字员工团队的五维对比" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用左右对照表说明"范式升级"升在哪里。左侧是传统脚本 / 单点机器人，定位是按指令执行的"工具"；右侧是带"推荐"标记的 AgentTeams 数字员工团队，定位是主动交付结果的"团队"。五个维度逐条对照：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="border:1px solid #e5e7eb;padding:6px 10px">维度</th><th style="border:1px solid #e5e7eb;padding:6px 10px">传统脚本 / 单点机器人</th><th style="border:1px solid #e5e7eb;padding:6px 10px">AgentTeams 数字员工团队</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">流程应变</td><td style="border:1px solid #e5e7eb;padding:6px 10px">固定流程：只能按预设脚本执行，无法应变</td><td style="border:1px solid #e5e7eb;padding:6px 10px">按需调用工具与技能：动态编排，灵活应变</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">协作方式</td><td style="border:1px solid #e5e7eb;padding:6px 10px">单一技能：一个机器人只会做一件事</td><td style="border:1px solid #e5e7eb;padding:6px 10px">多角色协作：Leader 规划 + Worker 专业执行</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">长任务</td><td style="border:1px solid #e5e7eb;padding:6px 10px">无法拆解长任务：复杂链路一断即停</td><td style="border:1px solid #e5e7eb;padding:6px 10px">任务拆解与并行：长任务自动分解、同步推进</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">可追溯性</td><td style="border:1px solid #e5e7eb;padding:6px 10px">出错难追溯：黑盒执行，定位问题靠人工</td><td style="border:1px solid #e5e7eb;padding:6px 10px">全程可追溯：计划、执行、报告透明可审计</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">经验沉淀</td><td style="border:1px solid #e5e7eb;padding:6px 10px">经验不沉淀：每次执行都从零开始</td><td style="border:1px solid #e5e7eb;padding:6px 10px">经验资产化：成果沉淀复用，持续进化</td></tr>
+      </table>
+      <p>页底结论句：范式升级是从"执行一个动作"的自动化，走向"交付一件完整事情"的团队式智能。衡量单位从"动作是否执行成功"变成"一件完整事情是否被交付"。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p87">
+    <h2><span class="pageno">第 87 页</span>AgentTeams 协同模型：Leader × Worker</h2>
+    <figure><img src="assets/p087.png" alt="第 87 页：Team 等于 Human 加 Leader 加 N 个 Workers 的协同结构图" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出团队的形式化定义：Team = Human + Leader + N Workers。一句话流程：Human 触发，Leader 规划、分派并汇总反馈，Worker 专业执行。左侧结构图中，Human（触发任务）连接 Leader（规划 / 分派 / 汇总反馈），Leader 再分叉连接 Worker 1、Worker 2 直至 Worker N；图上特别注明"Leader 和 Worker 都是 Agent"，即团队内部全是智能体，人只负责触发与接收结果。右侧把分工拆成三条：Leader 负责中枢决策——理解意图、制定 Plan（执行计划）、选择工具与 Worker，并统一管理上下文；Workers 专业化执行——按领域拆分子任务，分别调用知识、系统、工具完成可验证动作；反馈归 Leader 汇总——Worker 只回传执行结果，由 Leader 汇总为报告或操作结论，再反馈给 Human。这个"单一出口"设计让人类面对的不是 N 个机器人的碎片输出，而是一份汇总结论。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方回顾与开源仓库对该协同模型的描述与本页一致：Team = Human + Leader + N Workers，Human 触发、Leader 规划分派汇总、Worker 专业执行，且人类可随时介入（HITL，Human-in-the-Loop，人在回路）。AgentTeams 开源地址为 <a href="https://github.com/agentscope-ai/AgentTeams" target="_blank" rel="noopener">github.com/agentscope-ai/AgentTeams</a>；沙龙回顾见 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区文章</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p88">
+    <h2><span class="pageno">第 88 页</span>规模化复制全景：数字员工团队矩阵</h2>
+    <figure><img src="assets/p088.png" alt="第 88 页：数字员工团队矩阵全景与七个样板间列表" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页左栏是规模数字，右栏是平台结构与样板间清单。左栏主张"从样板间到 Team 与 Agent，把客户场景沉淀为可配置、可治理、可复用的数字员工工厂"，四组数字为：<strong>7 / 25</strong>——样板间矩阵，7 个样板间、25 个子样板间；<strong>49 / 75</strong>——49 个 Team，承载 75 个 Agent；<strong>300+</strong>——覆盖用户，面向业务用户形成使用闭环；<strong>18+1</strong>——管理员治理，分层运营保障复制质量（与第 100 页"1 名管理员 → 18 人自助运营"呼应）。</p>
+      <p>右栏顶部是"AgentTeams 数字人团队平台"示意：数字人团队由 Leader 加若干 Worker 组成；任务来源有三类——钉钉对话、Aone 工单、告警铃铃；任务执行流程为真人下发任务 → Leader 制定计划、分派协作 → Worker 执行 → 汇总反馈。中部表格列出七个样板间及其承担角色与团队构成示例：</p>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><th style="border:1px solid #e5e7eb;padding:6px 10px">样板间</th><th style="border:1px solid #e5e7eb;padding:6px 10px">承担的角色</th><th style="border:1px solid #e5e7eb;padding:6px 10px">团队构成示例</th></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">1 开源社区维护</td><td style="border:1px solid #e5e7eb;padding:6px 10px">社区维护者</td><td style="border:1px solid #e5e7eb;padding:6px 10px">RocketMQ、Sentinel、Spring Cloud Alibaba、AgentScope 等 9 个社区各一支团队</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">2 值班答疑 Oncall</td><td style="border:1px solid #e5e7eb;padding:6px 10px">一线值班员</td><td style="border:1px solid #e5e7eb;padding:6px 10px">可观测、SLS（日志服务）、MSE、RocketMQ、Kafka、MNS 等 10 个方向 Oncall 团队</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">3 内部研发流水线</td><td style="border:1px solid #e5e7eb;padding:6px 10px">研发工程师</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Agentloop 研发流水线团队</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">4 经营和商业化</td><td style="border:1px solid #e5e7eb;padding:6px 10px">数据分析师</td><td style="border:1px solid #e5e7eb;padding:6px 10px">Mamba-Insight 经营分析、PDSA 工作台</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">5 应急数字人</td><td style="border:1px solid #e5e7eb;padding:6px 10px">SRE 应急指挥</td><td style="border:1px solid #e5e7eb;padding:6px 10px">应急 Leader、根因分析、恢复执行、恢复验收、信息同步等分工协作</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">6 知识工程</td><td style="border:1px solid #e5e7eb;padding:6px 10px">知识管理员</td><td style="border:1px solid #e5e7eb;padding:6px 10px">知识工程团队</td></tr>
+        <tr><td style="border:1px solid #e5e7eb;padding:6px 10px">7 平台运维（橙色高亮）</td><td style="border:1px solid #e5e7eb;padding:6px 10px">平台运维工程师</td><td style="border:1px solid #e5e7eb;padding:6px 10px">agentteams-ops</td></tr>
+      </table>
+      <p>第 7 行被橙色高亮并单独注明：平台运维团队（agentteams-ops）统管上面所有样板间，提供基础设施、稳定性保障与平台支撑——即"运维数字员工的数字员工"。页底三条结论收束全页：样板间是复制单元（把流程、角色与知识固化为可复用配置）、Team 承载职能（多 Agent 协同支撑端到端任务交付）、治理保障复制（统一管理员体系，沉淀运营与质量标准）。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方沙龙回顾核实了本页规模口径：已落地 7 个样板间、49 个接入团队、75 个数字员工，场景覆盖开源社区维护、Oncall 分诊、应急协同处置、自然语言问数；"样板间"模式把流程、角色、知识固化为可复用配置，配合六步闭环批量交付。见 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区回顾</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p89">
+    <h2><span class="pageno">第 89 页</span>工程视角：样板间代码组织形式</h2>
+    <figure><img src="assets/p089.png" alt="第 89 页：ai-agent-teams 仓库目录树、五件套配置规范与三层 Skill 架构" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页把"样板间"落到真实的代码仓库结构上。左侧是实际仓库 ai-agent-teams 的目录树：仓库根下的 skills/ 是仓库级公共能力池；其下按样板间组织，示例为"样板间2：值班答疑"下的 observe-oncall 目录，内含样板间级 skills/ 和多个 Agent 目录（observe-oncall-leader、observe-oncall-cmsv1-agent、observe-oncall-cmsv2-agent、observe-oncall-cloudlens-agent）。Leader 的 Agent 目录里又有 config/ 子目录，放五份 Markdown 配置：SOUL.md（身份与边界）、AGENTS.md（协作契约）、MEMORY.md（长期记忆）、BOOTSTRAP.md（启动自检）、HEARTBEAT.md（运行心跳）；此外还有 Agent 本地 skills/ 和 ref_skill.json（声明式引用清单）。</p>
+      <p>右上块把这五份文件提炼为"五件套配置规范"：SOUL 身份、AGENTS 协作、MEMORY 记忆、BOOTSTRAP 启动、HEARTBEAT 心跳，并给出一句定义——"配置即契约：我是谁、和谁协作、记住什么、如何稳定运行"。右下块是三层 Skill（技能包，封装可复用操作能力）架构：仓库级 skills 跨项目通用、样板间级 skills 是场景模板、Agent 本地 skills 角色专属；ref_skill.json 只做声明式引用，打包时就近向上注入（本地没有就逐层向上找仓库级能力）；技能的晋升路径是"先本地验证 → 沉淀样板间 → 进入仓库级共用"。页底 slogan 总结三个性质：配置即代码 · Agent 可复制 · Skill 可复用——这正是"样板间可复制"在工程上的实现方式：复制一个团队等于复制一组配置与引用清单。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p90">
+    <h2><span class="pageno">第 90 页</span>落地流程：从定义到进化的闭环</h2>
+    <figure><img src="assets/p090.png" alt="第 90 页：数字员工全生命周期六步闭环" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页给出数字员工全生命周期的六步闭环，副标题强调"交付不是终点，运行经验持续回流、持续进化"。六步依次为：</p>
+      <ul>
+        <li><strong>01 定义</strong>：五件套配置规范 + 技能编写，定义身份、契约与能力边界。</li>
+        <li><strong>02 规范检查</strong>：路径 / 映射 / 凭证 / Git 四项审计，发布前逐项把关。</li>
+        <li><strong>03 打包发布</strong>：统一打包 + 模版发布，两步走灰度（先小范围验证再放量）防止打穿全量。</li>
+        <li><strong>04 批量建站</strong>：五阶段自动化 + AI 语义审核 + 断点续连（中断后从断点恢复），规模化交付。</li>
+        <li><strong>05 运行监控</strong>：拨测探活（周期性主动探测是否存活）+ 响应时延跟踪，持续掌握运行健康度。</li>
+        <li><strong>06 回流进化</strong>：运行时变更回流 Git，经验沉淀反哺定义与技能。</li>
+      </ul>
+      <p>第六步回接到第一步，使流程成为闭环：运行中产生的经验与变更回到版本库，再进入下一轮定义与发布。这与第 101 页的"进化回流"工程闭环是同一主张在交付流程层面的表述。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p91">
+    <h2><span class="pageno">第 91 页</span>场景一痛点：开源社区维护</h2>
+    <figure><img src="assets/p091.png" alt="第 91 页：Apache RocketMQ 社区维护的案例描述与五个传统痛点" loading="lazy"></figure>
+    <div class="explain">
+      <p>从本页起进入四个落地场景。场景一的案例描述：Apache RocketMQ 是阿里开源的分布式消息中间件，GitHub 上持续产生大量 Issue（问题单）和 PR（Pull Request，代码合并请求）；核心维护团队有限，需要自动化方案保障响应速度与代码质量。左下框点出关键挑战：用自动化放大有限维护人力。右栏列传统方式的五个痛点：01 Issue 响应周期长——人工确认、定位、修复方案平均 3–5 个工作日；02 Code Review 瓶颈——单个 PR 需阅读 diff（代码改动对比）、上下文和安全/兼容性，耗时 30–60 分钟；03 跨仓库一致性难保证——rocketmq 与 rocketmq-clients 协议同步易遗漏；04 新贡献者 CI 审批延迟——CI（持续集成，提交代码后的自动构建测试流程）首次贡献需 maintainer 手动 approve，受时区影响；05 社区活跃度受影响——响应慢导致贡献热情下降、Issue 堆积。这五条痛点在第 92 页被逐条对应到团队工作流与量化收益。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p92">
+    <h2><span class="pageno">第 92 页</span>开源社区维护数字员工团队</h2>
+    <figure><img src="assets/p092.png" alt="第 92 页：社区维护团队工作流架构图，含 Issue-Manager 与 PR-Manager 两条工作流" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页左侧是一张完整的工作流架构图，图例区分三类节点：自动 / Agent 自治、人工操作 / 人工触发、功能不完善。顶部两个触发源——人工输入（手动触发命令）与定时器（Cron 周期扫描，Cron 即 Unix 式定时任务）——都汇入 Leader Agent；Leader 扫描新 Issue / PR 并派发任务：派发 Issue 走 Issue-Manager 工作流，派发 PR / 通知 Review 走 PR-Manager 工作流。</p>
+      <p>Issue-Manager 工作流的步骤：Issue-Manager Agent 校验 Issue 正确性（模板 / 信息完整度）→ 生成 Spec（需求规格方案）评论到 Issue 区 → 等待 Issue 作者 Approve Spec（人工节点）→ approved 后生成 PR（代码补丁 + 提交，经 qoder cli 完成，该节点按图例标为"功能不完善"）。该 Agent 还 self-schedule 自建 Cron 任务做周期性检查：Spec 是否被采纳、PR 是否被 merge、PR 是否被评论、CI 是否通过、Issue / PR 是否 close，检查结果响应回 Leader。PR-Manager 工作流的步骤：PR-Manager Agent 拉取 PR 元数据 / Diff → Review PR（代码质量 / 设计 / 风险）→ 给出评价 / Review 评论（approve / request-changes）。图下方的"人工操作区（维护者 / Issue 作者）"保留四个人工动作：Issue 作者 Approve Spec、人工 Merge PR、人工 Close Issue、人工 Close PR——合并与关闭的最终决定权仍在人手里。图底再次注明平台运维团队（agentteams-ops）统管所有样板间、提供基础设施与稳定性保障。</p>
+      <p>右栏把全链路闭环概括为三段：issue → Spec；人工：{/approve}；PR Review → Merge。并给出四项量化结果：效率提升——首响 3–5 天 → 1 小时内；质量改善——Review 自动且覆盖率 100%；成本优化——节省约 60% 维护时间；创新价值——覆盖 10+ 个社区 / 25+ 个仓库。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p93">
+    <h2><span class="pageno">第 93 页</span>场景二：Oncall 值班与专业分诊</h2>
+    <figure><img src="assets/p093.png" alt="第 93 页：Oncall 值班分诊四层架构图与四步说明" loading="lazy"></figure>
+    <div class="explain">
+      <p>Oncall 即值班待命响应。本页左图自上而下分四层。入口层三个渠道：工单渠道（CSE 工单 / AES 云企）、野群（钉群机器人）、运维控制台（Chatbot）。分诊层是 7×24 小时值班答疑团队（全天候响应、快速解答问题）与工单 Leader Agent（越权检测、意图识别、工单度量等），Leader 之下挂图中列出的六个专业诊断 Agent：泰山 FAQ Agent、消息诊断 Agent、可观测诊断 Agent、Serverless 诊断 Agent、中间件诊断 Agent、云效诊断 Agent。能力层是三层 Skill 架构（被 Agent 引用、能力按需复用）：仓库级 .skills（通用工具、标准 SOP、质量门禁）、样板间级 Skills（场景模板、交付路径、最佳实践）、Agent 本地 Skills（角色专属经验与偏好配置），旁边并列 MCP 工具层（被 Agent 调用、统一工具接入；MCP 即 Model Context Protocol，Agent 连接外部工具的统一协议标准）。最底层仍是平台运维团队（agentteams-ops）统管所有样板间。图下绿字给出规模：覆盖 9 个产品、22 个诊断 Agent、86 个诊断业务技能。</p>
+      <p>右栏把架构读成四步：01 多入口接入——工单、群聊、控制台统一进线；02 Leader 分诊——识别意图并派发专业 Agent；03 专业诊断——FAQ、可观测、云产品协同诊断；04 能力复用——Skill 与 MCP 工具层稳定答疑。底部结论：协同结果是"专家能力编排可复用，可度量"——专家经验被固化成 Skill 与诊断 Agent，不再依赖专家本人在线。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p94">
+    <h2><span class="pageno">第 94 页</span>工单度量：工单 AI 覆盖金字塔</h2>
+    <figure><img src="assets/p094.png" alt="第 94 页：三个逃逸率闭环率定义与工单 AI 覆盖金字塔看板截图" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页回答"怎么度量诊断 Agent 做得好不好"。顶部横幅给出读法：闭环率和工单逃逸率看 Agent 诊断能力；场景逃逸率看能力覆盖缺口。三个指标定义为：<strong>AI 闭环率</strong>——场景已覆盖时，诊断 Agent 无需人工升级即可完成闭环的能力；<strong>AI 工单逃逸率</strong>——场景已覆盖且已调用 AI，但仍需升级人工，反映诊断 Agent 能力短板；<strong>AI 场景逃逸率</strong>——诊断场景尚未覆盖，需补充知识库、诊断工具或专项能力。三者把"能力不行"和"覆盖不够"区分开：前者改 Agent，后者补场景。</p>
+      <p>下半页是度量看板截图（具体数值在 PPT 中以星号脱敏）。左面板"工单 AI 覆盖金字塔"是一个三层漏斗：总工单数（100.00%）→ AI 工具覆盖的工单 → 使用 AI 闭环的工单，上方有 AI 闭环率 / AI 场景逃逸率 / AI 工单逃逸率三个切换标签。中面板"工单统计"列出总工单数、AI 工具覆盖工单及覆盖率、AI 工具未覆盖工单及场景逃逸率、AI 闭环工单及闭环率、AI 未闭环升级工单及工单逃逸率、未使用 AI 的升级工单数及占比。右面板"云原生各产品 AI 的工单数和占比"是柱线组合图（柱为 AI 工单数、红线为 AI 占比），横轴产品包括日志服务、微服务引擎、应用实时监控服务、云消息队列 MQ 版、API 网关、云消息队列 RabbitMQ 版、云消息队列 Kafka 版、轻量消息队列（原 MNS）、云消息队列 MQTT 版——与上一页"覆盖 9 个产品"对应。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p95">
+    <h2><span class="pageno">第 95 页</span>场景三：应急数字人协同处置</h2>
+    <figure><img src="assets/p095.png" alt="第 95 页：应急指挥 Leader 与四个并行 Worker 的协同处置架构" loading="lazy"></figure>
+    <div class="explain">
+      <p>场景三的目标一句话：一切围绕缩短 MTTR（Mean Time To Repair，平均修复时间）。结构是应急指挥 Leader 统筹调度、四个 Worker 并行协作、闭环处置。衡量指标条列出：MTTA（Mean Time To Acknowledge，平均响应时间）/ MTTR 改善、根因定位命中率、恢复验证覆盖率。</p>
+      <p>顶部蓝色横条是应急指挥 Leader：职责为接警分类、任务分派、全程跟踪闭环；旁边"响应红线"给出三条硬约束——5 分钟内分类分派、P0/P1（最高优先级故障）即时通知、超时自动升级。下方四张卡片是四个并行 Worker：01 信息同步——统一事件口径，实时播报进展，拉通全部干系人；02 根因分析——聚合日志与指标，快速收敛疑点，定位故障根因；03 恢复处置——执行预案与回滚，优先恢复业务，动作全程留痕；04 恢复验证——核验指标回归基线，确认业务恢复，闭环关闭事件。页底给出 MTTR 链路的五个阶段：故障发现 → 分类分派 → 并行协作 → 恢复验证 → 事件关闭。可以看到 Leader 管"分派与红线"，Worker 管"并行专业动作"，与第 87 页的协同模型完全同构。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p96">
+    <h2><span class="pageno">第 96 页</span>场景四：经营分析团队与自然语言问数</h2>
+    <figure><img src="assets/p096.png" alt="第 96 页：自然语言问数、口径铁律、准确性与效率平衡、分析协作四张卡片" loading="lazy"></figure>
+    <div class="explain">
+      <p>场景四是经营分析团队，用四张卡片讲清自然语言问数（用日常语言提问、系统自动取数回答）的四个设计点。01 自然语言问数：业务同学直接提问收入、客户、目标达成类问题，自动生成查询语句取数，无需等排期；示例问题为"本季度华东区收入目标达成情况如何？"。02 口径铁律：指标口径版本化沉淀、持续更新，全团队统一口径，避免"同名指标、各说各数"；强调句是"一个指标，只有一个权威口径"。03 准确性和效率的平衡：采用 PTC（Programmatic Tool Calling，编程式工具调用）——查询一次沉淀为脚本，用于产品经营日报、周报查数等重复取数；同时立下诚实性约束：数据源未接入就如实说明查不到，绝不编造数字，每个结论都可回溯到取数来源。04 分析协作：问数 Leader 统一调度多个分析 Worker 并行取数与分析，共同支撑业务工作台，即 1 个 Leader + N 个 Worker 协同作战；衡量指标为问数命中率 / 口径匹配准确率 / 取数耗时下降。四张卡片合起来回答了问数场景的三个老问题：取数慢（自动取数 + 脚本沉淀）、口径乱（权威口径版本化）、数字不可信（不编造 + 可回溯）。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p97">
+    <h2><span class="pageno">第 97 页</span>你敢让 AI 做生产变更吗？</h2>
+    <figure><img src="assets/p097.png" alt="第 97 页：你敢让 AI 做生产变更吗，两类根因与搬出模型的结论" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页是治理章节的设问过渡页。主标题"你敢让 AI 做生产变更吗？"，副标题点出 AgentTeams OPS 的定位："使用 AI 团队 运维 AI 团队"。标题下三个风险标签：误操作、越权、不可追溯。中部两张卡片给出两类根因：其一，LLM 是"概率性执行者"——输出天然带随机性，并给出真实教训：一次调用全量覆盖接口，导致成员被误删；其二，Agent 是自我进化的"活体"——运行时自改配置，会与版本库脱钩，持续产生配置漂移（运行态与版本库定义逐渐不一致）。页底给出结论方向：答案是把安全判断搬出模型——不由 AI 自己说了算；右下角"见下一页"引向第 98 页的具体治理链路。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p98">
+    <h2><span class="pageno">第 98 页</span>可信护栏：可解释、可追溯、可拒绝</h2>
+    <figure><img src="assets/p098.png" alt="第 98 页：四道关卡治理链路架构图，含身份权限预案确认四关卡与审计中心" loading="lazy"></figure>
+    <div class="explain">
+      <p>左栏给出原则与指标。衡量指标：权限覆盖率 / 拦截次数 / 审计完整率。"执行前门禁"的总原则是：把四道关卡压进外部治理链路，模型只给建议，代码决定能否执行——安全裁决权在模型之外的确定性代码里。四道关卡各一句：身份——调用者与目标资源一致；权限——按矩阵裁决可做什么；预案——影响面与回滚先写清；确认——确认内容绑定执行内容。</p>
+      <p>右栏是"AgentTeams Ops 团队四道关卡治理链路"的变更执行架构图，副标题说明四道关卡把高危操作纳入可裁决、可审计、可拒绝的外部治理链路，图内注明"四道强制关卡，任一不通过即拒绝"。流程从发起侧开始：用户在对话里提出变更，然后顺序过四关。关卡一身份：从会话上下文反查元数据台账，查不到或多个同名即拒绝（R1），唯一命中才放行。关卡二权限：按代码里的角色 × 操作 × 范围矩阵裁决，矩阵之外或混入越界目标则整单拒绝（R2）。关卡三预案：生成预案并冻结完整参数快照。关卡四确认：确认码经钉钉带外（对话通道之外的独立通道）送达发起人，码错 / 超时 / 非本人即拒绝（R3）。四关全过才"按快照执行，不重新推导参数"，最后结果回报。所有通过、拒绝与预案路径都虚线写入右侧审计中心：本地审计库（必写）+ SLS 日志服务（阿里云日志服务，远端副本），做到全量记录、不可篡改、可检索、可追溯。图左下"设计要点（关卡即强制边界）"四条：顺序通过（必须依次通过四道关卡）、单点否决（任一关卡不通过即终止）、快照执行（冻结参数，执行不重算）、全程审计（本地必写，远端副本）；图例区分通过路径、拒绝路径、审计写入三种线。页底三卡片对应标题三性：可解释——变更范围、理由可见；可追溯——全程留痕，记录 SLS；可拒绝——风险拦截，快速失败。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>官方沙龙回顾将"四道关卡治理链路 + 高危操作两段式确认"列为该实践的核心治理机制，与本页及下一页内容一致。见 <a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区回顾</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p99">
+    <h2><span class="pageno">第 99 页</span>高危操作治理：两段式确认机制</h2>
+    <figure><img src="assets/p099.png" alt="第 99 页：两段式变更单 Plan-Apply 时序图与关键设计说明" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页细化第 98 页的"确认"关卡。左栏"协议只留三件事"：1 先冻结 payloadhash（变更参数的哈希指纹），锁定变更意图；2 带外随机码经钉钉发送，原通道回填；3 通过本人 + TTL（Time To Live，有效期）+ hash 校验后执行。总结句：确认链路绑定意图、确认人、时效与 payload（变更内容本体）。</p>
+      <p>右栏是"两段式变更单（Plan-Apply）"时序图，原则为"写操作不直接执行，先出预案；确认码走带外通道，只在用户回复时进入对话"。四个参与方：U 发起人、M 模型、S 脚本（护栏）、D 钉钉（带外通道）。Plan 阶段（只生成预案）：①发起人提出"把某某从团队里移除"；②模型调 plan 命令请求生成预案；③脚本校身份、校权限、冻结参数快照，不执行任何写操作；④脚本随机生成确认码（示例 7K9Q-2M8L-P6T3，有效期 5 分钟）发往钉钉；⑤钉钉单聊送达发起人（模型看不到）；⑥脚本只返回预案文本给模型（不含确认码）；⑦模型把预案原样透传发起人（不暗示已执行）。Apply 阶段（真正执行）：⑧发起人在对话中回复确认码；⑨模型调 apply 命令提交确认码；⑩脚本校码、校有效期、校是否本人（发起人），任一失败则拒绝执行；⑪按冻结快照执行（精确到对象与字段、幂等与去重保护）；⑫⑬执行结果（成功/失败 + 明细）经模型透传回发起人。</p>
+      <p>图右"关键设计"五条：不出现在模型上下文（确认码由脚本随机生成、钉钉单聊发送，模型全程不可见、不可预测）；必须是发起者本人（脚本校验钉钉用户身份 = 发起者身份，群聊中他人拿到码也无法通过校验）；有效期校验（确认码过期自动失效，降低泄露与重放风险）；两段式语义（Plan 只生成预案不执行，Apply 才执行，杜绝"预案当已执行"的幻觉）；冻结快照（Apply 严格按 Plan 冻结的快照执行，防中途被篡改）。"安全性保障"四条与之呼应：模型无法预测或伪造确认码、带外通道传递绕开模型路径、可验证的人类确认、杜绝幻觉与冒充（没有确认码就无法通过 Apply，模型无法"替用户确认"）。示例钉钉单聊消息为"变更预案已生成，请查看对话。确认码：7K9Q-2M8L-P6T3，有效期：5 分钟，注意：请勿将确认码泄露给他人"。页底结论句：随机码不会出现在 LLM 上下文中，防止模型绕过审计执行任何高危操作。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p100">
+    <h2><span class="pageno">第 100 页</span>用 AI 运维 AI：从管理员瓶颈到自助运营</h2>
+    <figure><img src="assets/p100.png" alt="第 100 页：1 名系统管理员到 18 人安全自助运营的对比与四个机制" loading="lazy"></figure>
+    <div class="explain">
+      <p>本页用一组大数字对比讲运营模式的转变：左侧"1 名系统管理员"，标签"人工执行 · 单点瓶颈"；箭头指向右侧"18 人安全自助运营"，标签"授权自助 · 审计闭环"。转变靠四个机制支撑：统一管理——运维数字员工统一承接生产资源入口；分级授权——权限按角色下放，让业务团队自助完成；审计闭环——每次操作留痕，可解释、可追溯、可复核；角色升级——管理员从人工执行者升级为规则制定者。页底横幅点题：这本身就是数字员工的最佳实践——Dogfooding（用自己的产品运维自己的产品）：用 AI 运维 AI。也就是说，平台自身的运维就是第 88 页七个样板间中的"平台运维 agentteams-ops"，治理链路（98–99 页）正是让"放权给 18 人"仍然安全的前提。</p>
+    </div>
+    <div class="background">
+      <h3>补充背景（线上资料）</h3>
+      <p>线上另有对 AgentTeams Dashboard 管理功能的介绍，可作为本页"自助运营"在产品管理界面上的对照阅读：<a href="https://m.toutiao.com/a7698671028997751338/" target="_blank" rel="noopener">AgentTeams Dashboard 管理介绍</a>。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p101">
+    <h2><span class="pageno">第 101 页</span>可观测与自进化：数字员工也要被运营</h2>
+    <figure><img src="assets/p101.png" alt="第 101 页：被运维对象性质变化对照表与进化回流工程闭环图" loading="lazy"></figure>
+    <div class="explain">
+      <p>副标题定调：上线只是起点，数字员工需要持续拨测、审计回流与版本化发布，才能长期可信。左面板"被运维的对象自己也变了性质"用两行对照表说明传统运维假设为何失效：第一行，传统假设"存活 = 进程健康"，传统做法是 HTTP 探针端口通、返回 200 就是活的；但运维 Agent 时会出现"探针全绿，但它已经不能干活了"（HTTP/端口/数据库探针全绿而 Agent 实际失能）。第二行，传统假设"部署物是不变的"，传统做法把运行时的偏离都当配置漂移、重新部署抹平；但 Agent"自己改出的东西，往往比初始版本更好"（原版 v1.0 → 自主迭代主动升级到进化版 v2.0+），抹平等于丢掉进化。左下因此给出可观测侧答案：除了 Loongsuite 指标采集 + ProbeAgent 探针，保障 Agent 可用性——即不能只看进程存活，还要看业务可用性。</p>
+      <p>右面板"把单向交付链路接成环：让 Agent 的进化成为正式资产"，并注明"运行时是进化的发生地，不是它的存放地"。正向链路七步：①代码仓库（唯一权威源）→ ②CI 构建（静态检查、单元测试、模版打包）→ ③Agent 模版（版本化制品，如 v1.3.0）→ ④发布 → ⑤模版库（多版本 v1.3.0 / v1.2.3 / v1.1.5…）→ ⑥创建 / 升级（滚动升级 / 批量升级）→ ⑦运行中的 Agent（持有 MEMORY、AGENTS.md、skills）。回流链路：运行中的 Agent 发生运行时自我变更（MEMORY / AGENTS.md / skills，来源是真实任务反馈、Trace（调用链追踪）复盘提炼经验、自身配置修正）→ ⑧改动提取 → MR（提取 → 结构化 → 生成 MR；MR 即 Merge Request，代码合并请求）→ ⑨人评审合入（代码评审 / 安全检查 / 合入主干）→ 回到①代码仓库。闭环后的效果五条：进化可累积、全程可视化（所有变更以 MR 形式呈现，可 diff、可追溯）、可回滚（任何版本模版都可回滚）、批量传播（合入后的版本通过模版库分发至同类 Agent）、带着进化重来（新部署不再从零开始，而是把沉淀的进化一起交付上线）；并强调"仓库仍是唯一权威源，只是多了一个来源：Agent 自己"。</p>
+      <p>右下"边界与纪律：AI 自主性的护栏"五条：白名单回流（只允许白名单路径回流，如 AGENTS.md、skills、MEMORY）；敏感路径排除（凭证、密钥、系统配置、运行态数据等敏感路径一律不回流）；删除不同步（运行时的删除操作不回流，Agent 删掉能力更可能是问题）；必须人审合入（所有回流必须经过人类评审，合入主干后才生效）；全程审计留痕（提取、生成 MR、评审、合入全程留痕，可审计可追溯）。面板结论句：让 Agent 的自我改进，从"随容器消失的临时状态"变成可累积、可评审、可回滚的资产。页底两块标签收束全页：可观测——Loongsuite 指标采集 + ProbeAgent 探针保障可用性；进化回流——Badcase（失败案例）与经验进入 MR、Review、Release，形成可回滚的工程闭环。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p102">
+    <h2><span class="pageno">第 102 页</span>落地价值：从工具提效到 AI Native 组织能力升级</h2>
+    <figure><img src="assets/p102.png" alt="第 102 页：中心主张与六张价值卡片、规模化验证数字" loading="lazy"></figure>
+    <div class="explain">
+      <p>总结页。中心圆环写出中心主张：从"工具提效"升级到"AI Native 组织能力升级"（AI 原生，即 AI 能力成为组织默认组成部分），注解为"数字员工融入日常协作，能力沉淀为组织资产"。环绕六张卡片：左列人力释放——职能类打断性工作移交数字员工，真人回归主线；7×24 在线——黑灯工厂（无人值守场景）、值班答疑、github 社区、应急全天候第一时间响应；规模化复制——样板间模式，新团队接入边际成本递减。右列可信可控——权限矩阵、两段式确认、全量审计，零越权零误删；知识资产化——口径、SOP（标准作业程序）、经验版本化沉淀，人员流动不断层；规模化验证——给出四组数字：7 样板间、49 接入团队、75 数字员工、1→18 问题自助。六张卡片合起来的论点是：数字员工的价值不止省工时，而是把响应能力、知识与治理规则变成不依赖具体个人的组织资产。</p>
+    </div>
+  </section>
+
+  <section class="slide" id="r5-p103">
+    <h2><span class="pageno">第 103 页</span>结尾：THANKS / Q&amp;A</h2>
+    <figure><img src="assets/p103.png" alt="第 103 页：THANKS 结尾页，欢迎交流 Q&A" loading="lazy"></figure>
+    <div class="explain">
+      <p>报告结尾页：大字 THANKS，下方"欢迎交流 / Q&amp;A"，表示演讲结束、进入现场问答与交流环节，无新增信息点。</p>
+    </div>
+  </section>
+
+  <section class="takeaways">
+    <h2>要点回顾</h2>
+    <ul>
+      <li>核心命题是"一项职能 = 一支 Agent 团队"：Team = Human + Leader + N Workers，Leader 规划、分派、汇总，Worker 专业执行，从"执行一个动作"的自动化升级为"交付一件完整事情"的团队式智能。</li>
+      <li>规模化靠样板间复制：流程、角色、知识固化为配置（五件套配置规范 + 三层 Skill 架构 + 声明式引用），经定义、规范检查、打包发布、批量建站、运行监控、回流进化六步闭环交付；已落地 7 个样板间、49 个 Team、75 个 Agent。</li>
+      <li>四个场景给出可度量收益：开源社区维护首响 3–5 天缩到 1 小时内、Review 覆盖率 100%、节省约 60% 维护时间；Oncall 覆盖 9 个产品、22 个诊断 Agent、86 个技能；应急围绕缩短 MTTR 设响应红线；问数坚持统一口径与不编造数字。</li>
+      <li>安全判断搬出模型：身份、权限、预案、确认四道强制关卡任一不过即拒绝，高危操作走 Plan-Apply 两段式确认，确认码带外送达、不进模型上下文、绑定本人与有效期，实现零越权零误删。</li>
+      <li>数字员工自身也要被运营：探针保障业务可用性而非仅进程存活，运行时进化经 MR、人审、Release 回流版本库成为可回滚资产；平台自身运维即 Dogfooding，管理员从 1 人执行变为 18 人授权自助。</li>
+    </ul>
+  </section>
+
+  <section class="refs">
+    <h2>参考资料</h2>
+    <ul>
+      <li><a href="https://developer.aliyun.com/article/1760418" target="_blank" rel="noopener">阿里云开发者社区：Agent 开源开发者沙龙回顾</a> — 官方摘要，核实样板间复制模式、六步闭环、7/49/75 落地数字与四道关卡治理链路。</li>
+      <li><a href="https://github.com/agentscope-ai/AgentTeams" target="_blank" rel="noopener">AgentTeams 开源仓库</a> — Leader × Worker 协同模型与团队配置的开源实现；AgentCore 为其阿里云商业化版本。</li>
+      <li><a href="https://m.toutiao.com/a7698671028997751338/" target="_blank" rel="noopener">AgentTeams Dashboard 管理介绍</a> — 团队管理控制台的产品侧介绍，可对照第 100 页自助运营阅读。</li>
+    </ul>
+  </section>
+</div>
+</main>
+<script>
+(function () {
+  var panels = document.querySelectorAll('.report-panel');
+  var btns = document.querySelectorAll('.tab-btn');
+  function show(n, anchor) {
+    panels.forEach(function (p) { p.classList.toggle('active', p.id === 'report-' + n); });
+    btns.forEach(function (b) { b.classList.toggle('active', b.dataset.report === String(n)); });
+    if (anchor) {
+      var el = document.getElementById(anchor);
+      if (el) { el.scrollIntoView(); return; }
+    }
+    window.scrollTo(0, 0);
+  }
+  function fromHash() {
+    var h = location.hash;
+    var m = h.match(/^#report-(\d)$/);
+    if (m) { show(m[1]); return; }
+    m = h.match(/^#r(\d)-p\d+$/);
+    if (m) { show(m[1], h.slice(1)); return; }
+    show(1);
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      location.hash = '#report-' + b.dataset.report;
+    });
+  });
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>
