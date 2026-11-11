@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RocketMQ LiteTopic 完整教学 · 轻量队列模型与百炼平滑限流</title>
+<style>
+:root{
+  --ink:#0e1a2b; --ink2:#16283f; --paper:#f7f5f1; --card:#ffffff;
+  --orange:#ff6a00; --orange-soft:#fff1e6; --amber:#d97706; --amber-soft:#fef3c7;
+  --teal:#0d9488; --teal-soft:#ccfbf1; --green:#16a34a; --green-soft:#dcfce7;
+  --red:#dc2626; --red-soft:#fee2e2; --blue:#2563eb; --blue-soft:#dbeafe;
+  --muted:#5b6472; --line:#e4e0d8; --code-bg:#101c2c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.85;
+  font-family:-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--paper)}
+::-webkit-scrollbar-thumb{background:#c9c2b6;border-radius:6px;border:2px solid var(--paper)}
+::-webkit-scrollbar-thumb:hover{background:var(--orange)}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:"Cascadia Code",Consolas,"JetBrains Mono",monospace;font-size:.92em;
+  background:#eee9e0;border-radius:4px;padding:1px 5px}
+/* ---------- top nav ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--orange),var(--amber),var(--teal));z-index:200}
+header.top{position:sticky;top:0;z-index:100;background:rgba(14,26,43,.97);backdrop-filter:blur(6px);
+  border-bottom:1px solid #22364f;box-shadow:0 2px 12px rgba(14,26,43,.25)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 20px}
+.brand{color:#fff;font-weight:700;font-size:15px;white-space:nowrap}
+.brand em{color:var(--orange);font-style:normal}
+nav.chapters{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.chapters::-webkit-scrollbar{display:none}
+nav.chapters a{color:#b9c6d8;font-size:13px;padding:6px 10px;border-radius:6px;white-space:nowrap}
+nav.chapters a:hover{color:#fff;background:#1d3049;text-decoration:none}
+nav.chapters a.on{color:#fff;background:var(--orange)}
+/* ---------- layout ---------- */
+main{max-width:1020px;margin:0 auto;padding:0 22px 90px}
+section.ch{padding-top:64px}
+.kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--orange);
+  background:var(--orange-soft);border:1px solid #ffd9bd;border-radius:999px;padding:3px 12px;margin-bottom:10px}
+h1{font-size:34px;line-height:1.35;margin:14px 0 10px}
+h2{font-size:26px;margin:0 0 6px;line-height:1.4}
+h3{font-size:18px;margin:30px 0 8px;padding-left:10px;border-left:4px solid var(--orange)}
+h4{font-size:15.5px;margin:20px 0 6px}
+p{margin:10px 0}
+.lead{color:var(--muted);font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:16px 0;
+  box-shadow:0 1px 3px rgba(20,20,30,.05)}
+.note{border-left:4px solid var(--blue);background:var(--blue-soft);border-radius:0 10px 10px 0;padding:10px 16px;margin:14px 0;font-size:14.5px}
+.warn{border-left:4px solid var(--red);background:var(--red-soft);border-radius:0 10px 10px 0;padding:10px 16px;margin:14px 0;font-size:14.5px}
+.tip{border-left:4px solid var(--teal);background:var(--teal-soft);border-radius:0 10px 10px 0;padding:10px 16px;margin:14px 0;font-size:14.5px}
+.src{display:inline-block;font-size:12px;color:var(--muted);background:#efece5;border-radius:5px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+figure{margin:18px 0}
+figure img{width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+figcaption{font-size:13px;color:var(--muted);margin-top:6px;text-align:center}
+/* ---------- original slide figures + lightbox ---------- */
+figure.ppt{margin:20px 0;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;
+  box-shadow:0 2px 12px rgba(20,20,30,.08)}
+figure.ppt img{border:none;border-radius:0;cursor:zoom-in;display:block;transition:transform .4s ease}
+figure.ppt:hover img{transform:scale(1.012)}
+figure.ppt figcaption{display:flex;align-items:flex-start;gap:10px;text-align:left;margin:0;padding:10px 14px;
+  background:linear-gradient(90deg,var(--ink),var(--ink2));color:#b9c6d8;font-size:12.5px;line-height:1.7}
+figure.ppt .ftag{flex:none;margin-top:2px;font-weight:700;font-size:11px;letter-spacing:.06em;color:#fff;
+  background:var(--orange);border-radius:5px;padding:2px 8px;white-space:nowrap}
+figure.ppt .ftag.salon{background:var(--teal)}
+figure.ppt .ftxt{flex:1}
+figure.ppt .zhint{flex:none;margin-top:2px;font-size:11px;color:#8fa3bf;border:1px solid #33507a;border-radius:999px;padding:1px 9px;white-space:nowrap}
+@media(max-width:700px){figure.ppt .zhint{display:none}}
+#lightbox{position:fixed;inset:0;z-index:400;background:rgba(8,14,26,.9);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:26px;cursor:zoom-out}
+#lightbox.on{display:flex}
+#lightbox img{max-width:min(1600px,96vw);max-height:86vh;border-radius:10px;box-shadow:0 12px 70px rgba(0,0,0,.6);cursor:default}
+#lightbox .lb-cap{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);max-width:92vw;text-align:center;
+  color:#cfdcec;font-size:12.5px;background:rgba(14,26,43,.85);border:1px solid #33507a;padding:6px 16px;border-radius:999px}
+#lightbox .lb-x{position:absolute;top:14px;right:16px;width:38px;height:38px;border-radius:50%;border:1px solid #33507a;
+  background:#12233a;color:#fff;font-size:17px;cursor:pointer}
+#lightbox .lb-x:hover{background:var(--orange);border-color:var(--orange)}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;background:#fff}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--ink);color:#fff;font-weight:600}
+tr:nth-child(even) td{background:#faf8f4}
+pre{background:var(--code-bg);color:#dbe6f5;border-radius:10px;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.7;margin:12px 0}
+pre code{background:none;color:inherit;padding:0}
+pre .c{color:#7d93b2}pre .k{color:#ff9d5c}pre .s{color:#8fe3c0}pre .f{color:#7cc4ff}
+ul,ol{padding-left:24px}
+li{margin:6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.pill{display:inline-block;border-radius:999px;font-size:12px;font-weight:600;padding:2px 10px;margin:0 4px 4px 0}
+.p-o{background:var(--orange-soft);color:var(--orange)} .p-t{background:var(--teal-soft);color:var(--teal)}
+.p-r{background:var(--red-soft);color:var(--red)} .p-b{background:var(--blue-soft);color:var(--blue)}
+.p-g{background:var(--green-soft);color:var(--green)} .p-a{background:var(--amber-soft);color:var(--amber)}
+svg.diagram{width:100%;height:auto;display:block;margin:10px 0;background:#fff;border:1px solid var(--line);border-radius:10px}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+.reveal.vis{opacity:1;transform:none}
+/* ---------- hero ---------- */
+.hero{background:linear-gradient(135deg,#0e1a2b 0%,#16283f 55%,#1d3a5f 100%);color:#e8eef7;
+  border-radius:0 0 22px 22px;margin:0 -22px;padding:52px 40px 40px;position:relative;overflow:hidden}
+.hero:before{content:"";position:absolute;inset:0;background:
+  radial-gradient(600px 260px at 85% 0%,rgba(255,106,0,.22),transparent 60%),
+  radial-gradient(500px 240px at 10% 100%,rgba(13,148,136,.20),transparent 60%)}
+.hero>*{position:relative}
+.hero h1{color:#fff}
+.hero .lead{color:#b9c6d8}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.hero .meta span{font-size:12.5px;border:1px solid #33507a;border-radius:999px;padding:4px 12px;color:#cfdcec}
+/* ---------- simulator ---------- */
+.simwrap{background:var(--ink);border-radius:14px;color:#dbe6f5;padding:18px 20px;margin:18px 0;border:1px solid #22364f}
+.simwrap h3{color:#fff;border-left-color:var(--orange);margin-top:4px}
+.simgrid{display:grid;grid-template-columns:290px 1fr;gap:18px}
+@media(max-width:900px){.simgrid{grid-template-columns:1fr}}
+.controls{background:#12233a;border:1px solid #24405f;border-radius:10px;padding:14px 16px}
+.controls h4{color:#ffd9bd;margin:2px 0 10px;font-size:13px;letter-spacing:.06em}
+.ctl{margin:10px 0}
+.ctl label{display:flex;justify-content:space-between;font-size:12.5px;color:#aebfd6;margin-bottom:4px}
+.ctl label b{color:#fff;font-weight:600}
+.ctl input[type=range]{width:100%;accent-color:var(--orange);height:20px}
+.ctl select{width:100%;background:#0e1a2b;color:#fff;border:1px solid #33507a;border-radius:6px;padding:5px 8px;font-size:13px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-run{background:var(--orange);color:#fff}.btn-run:hover{background:#e85f00}
+.btn-ghost{background:#1d3049;color:#cfdcec;border:1px solid #33507a}.btn-ghost:hover{background:#254062}
+.btn-burst{background:var(--amber);color:#241a05}.btn-burst:hover{background:#c26a05}
+.simview canvas{width:100%;border-radius:10px;background:#0b1626;display:block}
+.simstats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.stat{flex:1;min-width:110px;background:#12233a;border:1px solid #24405f;border-radius:8px;padding:8px 12px}
+.stat .n{font-size:20px;font-weight:700;color:#fff}
+.stat .l{font-size:11.5px;color:#8fa3bf}
+.stat.pass .n{color:#6ee7b7}.stat.rej .n{color:#fca5a5}.stat.q .n{color:#fcd34d}
+#simhint{font-size:13px;color:#ffd9bd;background:#241a05;border:1px solid #5b430f;border-radius:8px;padding:8px 12px;margin-top:10px;min-height:38px}
+/* ---------- quiz ---------- */
+details.quiz{background:#fff;border:1px solid var(--line);border-radius:10px;margin:10px 0;padding:10px 16px}
+details.quiz summary{cursor:pointer;font-weight:600;font-size:15px}
+details.quiz[open]{border-color:var(--orange)}
+details.quiz .ans{margin-top:8px;font-size:14.5px;color:#33405a;border-top:1px dashed var(--line);padding-top:8px}
+footer{border-top:1px solid var(--line);margin-top:60px;padding-top:20px;font-size:13px;color:var(--muted)}
+.toc-card ol{columns:2;column-gap:36px}
+@media(max-width:700px){.toc-card ol{columns:1}.hero{padding:36px 22px}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<header class="top">
+  <div class="top-in">
+    <span class="brand">RocketMQ <em>LiteTopic</em> 教学</span>
+    <nav class="chapters" id="nav">
+      <a href="#ch0">导学</a><a href="#ch1">1 问题背景</a><a href="#ch2">2 前置知识</a><a href="#ch3">3 LiteTopic 机制</a><a href="#ch4">4 百炼网关限流</a><a href="#ch5">5 资产中心隔离</a><a href="#ch6">6 异步会话网关</a><a href="#ch7">7 系统间协作</a><a href="#ch8">8 总结自测</a>
+    </nav>
+  </div>
+</header>
+<main>
+
+<div class="hero" id="ch0">
+  <span class="kicker" style="background:rgba(255,106,0,.15);border-color:#7a4a26;color:#ffb27a">完整教学 · 基于本地素材扩展</span>
+  <h1>RocketMQ LiteTopic：轻量队列模型<br>与百炼平滑限流实战</h1>
+  <p class="lead">从"限流为什么难"讲起，经过漏桶与消息队列的基础补课，逐层拆解 LiteTopic 的四个特性与 Suspend 机制，
+  再完整复盘两个生产案例（百炼网关限流比降 10 倍、资产中心一人一 Topic），最后拓展到异步会话网关与系统间 Agent 协作。
+  内含一个可动手调节的多租户限流模拟器，让你亲眼看到"Sleep 传染"与"Suspend 隔离"的区别。</p>
+  <div class="meta">
+    <span>素材：百炼网关实践文章（不铭 / 文婷 / 稚柳）</span>
+    <span>素材：资产中心文章（张世杰·靖泉）</span>
+    <span>素材：周礼《让 AI Agent 不再等待》Agentic AICon 分享讲稿 + 23 页视频 PPT（逐页核对）</span>
+    <span>素材：Agent 异步会话网关架构书</span>
+    <span>素材：Agent 开源开发者沙龙报告 3</span>
+  </div>
+</div>
+
+<div class="card toc-card reveal">
+  <h3 style="margin-top:4px">学习路线</h3>
+  <ol>
+    <li><a href="#ch1">问题背景</a> —— GPU 稀缺时代，限流从防御题变成资源调度题</li>
+    <li><a href="#ch2">前置知识</a> —— 限流算法、RocketMQ 架构与数据流、消费模型边界、漏桶为什么要外置</li>
+    <li><a href="#ch3">LiteTopic 机制</a> —— 四特性、Ready Set、Suspend vs Sleep（含模拟器）</li>
+    <li><a href="#ch4">案例一</a> —— 百炼网关：分布式漏桶矩阵，限流比降 10 倍</li>
+    <li><a href="#ch5">案例二</a> —— 资产中心：一人一 Topic 的用户级治理</li>
+    <li><a href="#ch6">拓展一</a> —— 异步会话网关：会话粘性与故障恢复</li>
+    <li><a href="#ch7">拓展二</a> —— OpenClaw Channel：系统间异步协作</li>
+    <li><a href="#ch8">总结自测</a> —— 决策回顾、10 道自测题、术语表、参考资料</li>
+  </ol>
+  <p class="lead">阅读建议：第 2 章是补课，已有 MQ 与限流基础可跳过；第 3 章的模拟器建议亲手调一遍参数；每章末尾的"本节要点"用于复习。</p>
+</div>
+
+<!-- ================= 1 ================= -->
+<section class="ch" id="ch1">
+  <span class="kicker">CHAPTER 01</span>
+  <h2>问题背景：大模型网关的限流为什么难</h2>
+  <p class="lead">先建立全局认知：这一章回答"为什么传统限流不够用"，是后面所有设计决策的出发点。</p>
+
+  <h3>1.1 GPU 稀缺改变了限流的目标</h3>
+  <p>过去十年 CPU、内存、带宽都能分钟级甚至秒级弹性扩容，互联网限流主要解决"防刷"和"防雪崩"。
+  进入大模型时代，GPU 扩容周期长、单价高、供给受硬件交付节奏制约——"GPU 池子有多大"几乎直接决定"今天能服务多少客户、能承诺多高的 SLA"。
+  百炼是阿里云的大模型服务平台，承载百万级用户同时调用千问等数十种大模型；作为国内最大的公有云模型推理入口之一，
+  每一次限流误判意味着用户侧超时、重试甚至业务中断，每一次过载放行意味着稀缺 GPU 算力浪费和其他租户体验劣化。<span class="src">网关实践文章</span></p>
+  <p>因此网关要在有限 GPU 池里同时兑现三件事：</p>
+  <table>
+    <tr><th>承诺</th><th>含义</th><th>反面后果</th></tr>
+    <tr><td><b>租户级流量隔离</b></td><td>各租户流量相互隔离，防止争抢与干扰</td><td>个别租户突发拖垮所有人</td></tr>
+    <tr><td><b>精细化配额限流</b></td><td>租户维度差异化配额，只限超额请求</td><td>未达配额的用户被误伤</td></tr>
+    <tr><td><b>平滑突发与资源统筹</b></td><td>削峰填谷，在有限池内统筹分配</td><td>尖峰打爆 GPU 或大面积 503</td></tr>
+  </table>
+  <p>百炼面对的不是单一限流场景，而是三类叠加：基于 SLA 承诺的<b>基础限流</b>（要稳定、可计量、可观测）；
+  用户之间及客户内部多账号的<b>细粒度管控</b>（User + Model 维度交叉约束）；<b>超大客户的扩容与突发承接</b>
+  （额度调大后突发真来时 GPU 扩容到位前顶不住——硬限大面积 503，放行又过载殃及他人）。
+  三者交织意味着限流不只是"决定放不放过"，更要回答"<b>放过去之后以什么节奏喂给后端</b>"。<span class="src">网关实践文章</span></p>
+
+  <h3>1.2 AI 应用与传统互联网应用的四个差异</h3>
+  <p>消息中间件团队从传统互联网架构演进到 AI 应用架构，总结出四个差异，它们直接决定了消息系统要改什么：<span class="src">周礼分享讲稿</span></p>
+  <table>
+    <tr><th>维度</th><th>传统互联网应用</th><th>AI Agent 应用</th><th>对消息系统的要求</th></tr>
+    <tr><td>行为模式</td><td>流程由代码预编排，可预知；同类请求耗时相近（毫秒级）</td><td>模型自主执行，同一问题不同上下文结果不同，是"未知系统"</td><td>不能按同类任务假设做共享队列</td></tr>
+    <tr><td>任务时长</td><td>毫秒级（PPT 口径约 0.1s，短且固定）</td><td>分钟级甚至数小时、数天（PPT 口径 3–15s+，长且不可预知）</td><td>队列更容易堆积，单条慢消息造成<b>队头阻塞</b>：FIFO 下对头消息出不去，后面所有人全卡住；传统预警阈值失效，运维监控需重新校准</td></tr>
+    <tr><td>交互方式</td><td>工作流一步步推进</td><td>人以聊天方式多轮迭代上下文</td><td>需要会话级状态管理与<b>会话粘性</b>（上下文落在同一通道/节点）</td></tr>
+    <tr><td>运营成本</td><td>CPU 近似无限扩，"能靠扩容解决的都是好架构"</td><td>GPU 成本高、扩不动</td><td>隔离与调度必须精细，不能靠加机器换隔离</td></tr>
+  </table>
+  <div class="note"><b>队头阻塞（Head-of-Line Blocking）</b>：消息队列先进先出，若队头是一条耗时极长的消息（或某个用户的消息占满队列），
+  其后所有消息——包括其他用户的——都被阻塞。这是"共享队列 + 多租户"最根本的矛盾，也是 LiteTopic 要把隔离粒度下沉到会话/用户级的原因。</div>
+
+  <h3>1.3 行业信号：异步化是 2026 年的共同方向</h3>
+  <p>讲稿中引用了两个头部厂商的公开路线，说明"异步化"不是某家的定制需求：<span class="src">周礼分享讲稿</span></p>
+  <ul>
+    <li><b>MCP 2026 年 3 月 roadmap</b>：不再以里程碑式发布，转为四个优先级领域，前两条与分布式系统直接相关——扩展 transport、让 MCP Server 方便水平扩展。
+    旧 SDK 没解决会话管理：多轮会话状态存在单节点上，请求不落在同一台机器就丢上下文，也因此无法水平扩展。
+    其实验性 Task 方案（创建 task → 轮询状态 → 取回结果）也承认未定义失败重试与超时过期策略。</li>
+    <li><b>Google</b>：官方博客提到企业级长任务可能"停好几天"，需要事件驱动机制；A2A 协议做多 Agent 异步分发。
+    Anthropic 的 managed agents 文章提出把 session 外化（session log），可随时 get session / get event 在任意节点恢复——即在线会话化 + checkpoint 故障恢复。</li>
+  </ul>
+  <p>归纳成四条需求（PPT 称之为"下一代 Agent 通信底座的四块基石"）：<b>会话状态分散存储</b>（告别单实例内存瓶颈）、
+  <b>长任务调度必须异步 + 事件驱动</b>、<b>故障自动恢复</b>（会话不丢、任务可续）、<b>多 Agent 协作依赖可靠消息传递</b>。
+  PPT 的结论句："两份路线图，一个共同结论——异步，是 Agent 时代的新共识。"
+  这正是 LiteTopic 与第 6 章异步会话网关要回答的问题。<span class="src">PPT s02</span></p>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s02.jpg" alt="原 slide s02：两份路线图汇聚为异步四块基石" loading="lazy">
+    <figcaption><span class="ftag">PPT s02</span><span class="ftxt">原图保留"两份路线图 → 一个答案"的完整对应：左侧 MCP 与 Google 官方路线卡片，右侧收敛为下一代 Agent 通信底座的四块基石；正文逐条展开，此图供对照。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <div class="tip"><b>本节要点</b>：GPU 稀缺 + 海量租户 + 突发尖峰三个约束叠加，使限流从"放不放过"升级为"以什么节奏放行"；
+  AI 任务的长耗时与多轮会话带来队头阻塞与会话粘性两个新矛盾；异步化是行业共同方向。</div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="ch" id="ch2">
+  <span class="kicker">CHAPTER 02</span>
+  <h2>前置知识：限流算法、RocketMQ 架构与消费模型</h2>
+  <p class="lead">补课章。先补 RocketMQ 的整体架构与数据流，再理解"固定窗口 + 漏桶"的选型理由，以及传统 Topic/Group 模型的能力边界。</p>
+
+  <h3>2.1 四种限流算法速览</h3>
+  <p class="lead">本表为通用限流知识补课（非素材原文），用于理解下一段的选型理由；选型理由本身来自网关实践文章。</p>
+  <table>
+    <tr><th>算法</th><th>机制</th><th>突发态度</th><th>适用</th></tr>
+    <tr><td>固定窗口</td><td>每个时间窗口计数，超阈值拒绝，窗口结束清零</td><td>对短期波动宽容（窗口边界可能放过两倍突发）</td><td>硬上限、配额计量</td></tr>
+    <tr><td>滑动窗口</td><td>窗口随时间滑动精确计数</td><td>严格，边界突发也被精确计算</td><td>需要精确平滑计数</td></tr>
+    <tr><td>令牌桶</td><td>匀速发令牌，请求拿令牌才放行，桶里攒的令牌允许一次突发</td><td><b>天然允许突发</b></td><td>下游能扛尖峰的场景</td></tr>
+    <tr><td>漏桶</td><td>请求先入桶排队，<b>匀速流出</b>，桶满才拒</td><td>整形为匀速，尖峰被攒起来慢慢放</td><td>下游稳态友好、尖峰敏感（如 GPU）</td></tr>
+  </table>
+  <p>百炼的最终选型是<b>固定窗口 + 漏桶</b>，理由非常具体：<span class="src">网关实践文章</span></p>
+  <ul>
+    <li><b>固定窗口而非滑动窗口</b>：滑动窗口更严格，边界突发也被精确计算；固定窗口对短期波动更宽容——配额语义下"宽容一点"反而减少误伤。</li>
+    <li><b>漏桶而非令牌桶</b>：漏桶匀速放行契合 GPU 这种稳态友好、尖峰敏感的下游；令牌桶天然允许突发，恰恰是 GPU 最怕的形态。</li>
+  </ul>
+  <div class="note"><b>分层组合</b>：固定窗口管硬上限（SLA 配额）、漏桶管放行节奏、消息队列管承接缓冲——三层串联缺一不可。限流不是单一算法。</div>
+
+  <h3>2.2 漏桶为什么必须搬到进程外</h3>
+  <p>算法选定后新问题随之而来：超大客户的突发流量如果堆在<b>网关进程内存</b>里，几十万请求会立刻把网关本身打挂。
+  漏桶必须从进程内搬到进程外，用一个足够大、足够隔离的外部存储承接缓冲，把"接住请求"和"按节奏放行"在物理上拆开。
+  消息队列是天然候选——但要进一步追问三个问题：<b>能否支持百万级队列？能否运行时按需创建？流控粒度是否足够精细？</b>
+  传统 RocketMQ Topic 对这三个问题的答案都不理想，于是 LiteTopic 进入视野。<span class="src">网关实践文章</span></p>
+
+  <h3>2.3 RocketMQ 基础：角色、架构与数据流</h3>
+  <p class="lead">本节为通用 RocketMQ 知识补课（非素材原文）：先建立全景，2.4 再看这套模型的能力边界，第 3 章看 LiteTopic 改在哪里。</p>
+
+  <h4>角色与概念一览</h4>
+  <table>
+    <tr><th>概念</th><th>一句话定义</th><th>在本案例中的角色</th></tr>
+    <tr><td><b>Producer</b></td><td>消息发送方，经 NameServer 发现 Broker 路由后直连发送</td><td>百炼网关发送侧</td></tr>
+    <tr><td><b>Consumer</b></td><td>消息接收方；Push 模式实质是"SDK 拉取 + 业务回调"</td><td>统一消费 Pod 组</td></tr>
+    <tr><td><b>Consumer Group</b></td><td>行为一致的一组消费者，负载均衡与消费进度管理的单位</td><td>整个消费组共享一次通配订阅</td></tr>
+    <tr><td><b>Topic</b></td><td>消息的一级逻辑分类；逻辑概念，物理上以队列分散在多个 Broker</td><td>父 Topic 是真实的传统 Topic</td></tr>
+    <tr><td><b>队列（MessageQueue）</b></td><td>Topic 的物理分片，FIFO、并发与隔离的单位</td><td>传统隔离单元；LiteTopic 把它下沉到用户/会话</td></tr>
+    <tr><td><b>Tag</b></td><td>Topic 内二级分类，供消费过滤</td><td>案例中通配 "*" 即不过滤</td></tr>
+    <tr><td><b>Offset</b></td><td>消费进度坐标：消息在队列中的位置</td><td>断线/宕机后续传的凭据</td></tr>
+    <tr><td><b>Broker</b></td><td>消息存储与转发服务器：写 CommitLog、主从复制、响应拉取</td><td>漏桶矩阵的物理载体</td></tr>
+    <tr><td><b>NameServer</b></td><td>无状态路由注册中心：Broker 注册、客户端发现，节点互不通信</td><td>传统 Topic 创建生效慢的根源之一</td></tr>
+  </table>
+
+  <h4>整体架构：控制面与数据面</h4>
+  <svg class="diagram" viewBox="0 0 940 470" role="img" aria-label="RocketMQ 整体架构：NameServer、Broker、Producer、Consumer 四类角色">
+    <defs>
+      <marker id="arAb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#2563eb"/></marker>
+      <marker id="arAg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#16a34a"/></marker>
+      <marker id="arAt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#0d9488"/></marker>
+      <marker id="arAo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#d97706"/></marker>
+    </defs>
+    <text x="20" y="28" font-size="15" font-weight="700" fill="#0e1a2b">整体架构：控制面（虚线）只管路由，数据面（实线）直连收发</text>
+    <rect x="310" y="48" width="320" height="76" rx="10" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="470" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">NameServer 集群 · 无状态、互不通信</text>
+    <g font-size="12" fill="#33405a">
+      <rect x="330" y="80" width="80" height="30" rx="6" fill="#fff" stroke="#2563eb"/><text x="370" y="99" text-anchor="middle">NS-1</text>
+      <rect x="430" y="80" width="80" height="30" rx="6" fill="#fff" stroke="#2563eb"/><text x="470" y="99" text-anchor="middle">NS-2</text>
+      <rect x="530" y="80" width="80" height="30" rx="6" fill="#fff" stroke="#2563eb"/><text x="570" y="99" text-anchor="middle">NS-3</text>
+    </g>
+    <rect x="20" y="210" width="180" height="120" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
+    <text x="110" y="232" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">Producer 组</text>
+    <rect x="40" y="246" width="64" height="36" rx="6" fill="#fff" stroke="#16a34a"/><text x="72" y="268" text-anchor="middle" font-size="12">P-1</text>
+    <rect x="116" y="246" width="64" height="36" rx="6" fill="#fff" stroke="#16a34a"/><text x="148" y="268" text-anchor="middle" font-size="12">P-2</text>
+    <text x="110" y="312" text-anchor="middle" font-size="11" fill="#5b6472">如百炼网关发送侧</text>
+    <rect x="740" y="210" width="180" height="120" rx="10" fill="#f0fdfa" stroke="#0d9488"/>
+    <text x="830" y="232" text-anchor="middle" font-size="13" font-weight="700" fill="#0f766e">Consumer Group</text>
+    <rect x="760" y="246" width="64" height="36" rx="6" fill="#fff" stroke="#0d9488"/><text x="792" y="268" text-anchor="middle" font-size="12">C-1</text>
+    <rect x="836" y="246" width="64" height="36" rx="6" fill="#fff" stroke="#0d9488"/><text x="868" y="268" text-anchor="middle" font-size="12">C-2</text>
+    <text x="830" y="312" text-anchor="middle" font-size="11" fill="#5b6472">组内分摊队列 · 共享消费</text>
+    <rect x="280" y="190" width="380" height="180" rx="10" fill="#fff" stroke="#d97706"/>
+    <text x="470" y="212" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">Broker 集群 · 存储与转发</text>
+    <rect x="300" y="226" width="160" height="120" rx="8" fill="#fff1e6" stroke="#ff6a00"/>
+    <text x="380" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#ff6a00">Broker Master</text>
+    <text x="380" y="272" text-anchor="middle" font-size="11" fill="#33405a">CommitLog 顺序写</text>
+    <text x="380" y="292" text-anchor="middle" font-size="11" fill="#33405a">ConsumeQueue 索引</text>
+    <text x="380" y="312" text-anchor="middle" font-size="11" fill="#33405a">读写主力</text>
+    <rect x="480" y="226" width="160" height="120" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="560" y="248" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">Broker Slave</text>
+    <text x="560" y="272" text-anchor="middle" font-size="11" fill="#33405a">复制</text>
+    <text x="560" y="292" text-anchor="middle" font-size="11" fill="#33405a">可接管读</text>
+    <text x="560" y="312" text-anchor="middle" font-size="11" fill="#33405a">自动切换需 DLedger</text>
+    <path d="M470,190 L470,128" stroke="#2563eb" stroke-dasharray="5 4" fill="none" marker-end="url(#arAb)"/>
+    <text x="482" y="162" font-size="11" fill="#2563eb">① 注册路由 · 心跳 30s</text>
+    <path d="M110,210 C110,140 240,86 306,86" stroke="#2563eb" stroke-dasharray="5 4" fill="none" marker-end="url(#arAb)"/>
+    <text x="120" y="160" font-size="11" fill="#2563eb">② 拉路由 · 30s</text>
+    <path d="M830,210 C830,140 700,86 634,86" stroke="#2563eb" stroke-dasharray="5 4" fill="none" marker-end="url(#arAb)"/>
+    <text x="820" y="160" text-anchor="end" font-size="11" fill="#2563eb">② 拉路由 · 30s</text>
+    <path d="M200,264 L298,264" stroke="#16a34a" fill="none" marker-end="url(#arAg)"/>
+    <text x="248" y="254" text-anchor="middle" font-size="11" fill="#15803d">③ 发送</text>
+    <path d="M460,286 L476,286" stroke="#d97706" fill="none" marker-end="url(#arAo)"/>
+    <text x="470" y="278" text-anchor="middle" font-size="10" fill="#b45309">复制</text>
+    <path d="M740,286 L644,286" stroke="#0d9488" fill="none" marker-end="url(#arAt)"/>
+    <text x="702" y="276" text-anchor="middle" font-size="11" fill="#0f766e">④ 拉取 · 长轮询</text>
+    <path d="M20,406 L60,406" stroke="#2563eb" stroke-dasharray="5 4"/><text x="70" y="410" font-size="12" fill="#5b6472">控制面：路由注册 / 发现，30s 级轮询、无推送</text>
+    <path d="M480,406 L520,406" stroke="#16a34a"/><text x="530" y="410" font-size="12" fill="#5b6472">数据面：发送 / 复制 / 拉取，不经过 NameServer</text>
+    <text x="20" y="440" font-size="12" fill="#5b6472">Topic 是逻辑概念：它的队列物理分散在多个 Broker；Queue 才是 FIFO、并发与隔离的单位。</text>
+  </svg>
+  <p>全系统只有四类角色。<b>NameServer</b> 是路由注册中心：每个节点持有全量路由，节点之间互不通信、没有选举，挂一台换一台即可。
+  <b>Broker</b> 启动时把自己的 Topic/队列信息注册到所有 NameServer，之后每 30s 心跳维持；Producer 与 Consumer 每 30s 从 NameServer <b>拉取</b>路由并本地缓存，NameServer 不主动推送。
+  这套"注册 + 轮询"的控制面决定了一个工程事实：新建 Topic 后要等 Broker 注册、客户端轮询都跟上才生效，量级是几十秒——这正是第 4 章旧方案"元数据重、生效慢"痛点的根源。</p>
+  <p>数据面不经过 NameServer：Producer 拿到路由后<b>直连 Broker 发送</b>，Consumer 也<b>直连 Broker 拉取</b>。
+  Broker 集群内 Master 负责读写，Slave 从 Master 复制、可接管读（自动主从切换需 DLedger 模式）。
+  一个 Topic 的队列分散在多个 Broker 上，因此发送与消费天然分布式——也意味着"队列"才是物理隔离与并发的单位，Topic 只是逻辑名字。</p>
+
+  <h4>存储：CommitLog 与 ConsumeQueue</h4>
+  <svg class="diagram" viewBox="0 0 940 340" role="img" aria-label="RocketMQ 存储结构与消息读写路径">
+    <defs>
+      <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#5b6472"/></marker>
+      <marker id="arBg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#16a34a"/></marker>
+      <marker id="arBt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#0d9488"/></marker>
+      <marker id="arBo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#d97706"/></marker>
+    </defs>
+    <text x="20" y="26" font-size="15" font-weight="700" fill="#0e1a2b">一条消息的旅程：混合顺序写、按索引读</text>
+    <rect x="20" y="70" width="110" height="50" rx="8" fill="#dcfce7" stroke="#16a34a"/><text x="75" y="99" text-anchor="middle" font-size="13" fill="#15803d">Producer</text>
+    <rect x="170" y="44" width="360" height="250" rx="10" fill="#fff" stroke="#ff6a00"/>
+    <text x="350" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#ff6a00">Broker Master</text>
+    <rect x="190" y="80" width="320" height="46" rx="6" fill="#fff1e6" stroke="#ff6a00"/>
+    <text x="350" y="99" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">CommitLog · 所有 Topic 混合</text>
+    <text x="350" y="116" text-anchor="middle" font-size="11" fill="#33405a">单文件顺序追加 · 1G 滚动</text>
+    <path d="M350,126 L350,146" stroke="#5b6472" marker-end="url(#arB)"/>
+    <text x="362" y="140" font-size="11" fill="#5b6472">dispatch</text>
+    <rect x="190" y="150" width="150" height="58" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="265" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">ConsumeQueue</text>
+    <text x="265" y="190" text-anchor="middle" font-size="10.5" fill="#33405a">队列A索引：offset+size+tag</text>
+    <rect x="360" y="150" width="150" height="58" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="435" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#1d4ed8">ConsumeQueue</text>
+    <text x="435" y="190" text-anchor="middle" font-size="10.5" fill="#33405a">队列B索引 …</text>
+    <rect x="190" y="224" width="320" height="44" rx="6" fill="#f1f5f9" stroke="#64748b"/>
+    <text x="350" y="243" text-anchor="middle" font-size="12" fill="#475569">IndexFile（可选）· 按消息 key 反查</text>
+    <text x="350" y="259" text-anchor="middle" font-size="10.5" fill="#64748b">消费不依赖它，仅供运维反查</text>
+    <rect x="790" y="70" width="130" height="50" rx="8" fill="#ccfbf1" stroke="#0d9488"/><text x="855" y="99" text-anchor="middle" font-size="13" fill="#0f766e">Consumer</text>
+    <path d="M130,95 L186,95" stroke="#16a34a" marker-end="url(#arBg)"/>
+    <text x="158" y="86" text-anchor="middle" font-size="11" fill="#15803d">① 追加</text>
+    <path d="M790,112 C660,140 570,160 514,172" stroke="#0d9488" fill="none" marker-end="url(#arBt)"/>
+    <text x="655" y="132" text-anchor="middle" font-size="11" fill="#0f766e">② 读索引定位</text>
+    <path d="M510,100 L786,95" stroke="#0d9488" fill="none" marker-end="url(#arBt)"/>
+    <text x="650" y="88" text-anchor="middle" font-size="11" fill="#0f766e">③ 回取消息体</text>
+    <path d="M855,120 L855,308 L350,308 L350,296" stroke="#d97706" fill="none" marker-end="url(#arBo)"/>
+    <text x="600" y="300" text-anchor="middle" font-size="11" fill="#b45309">④ 成功：提交 offset · 失败：进重试队列</text>
+    <text x="20" y="330" font-size="12" fill="#5b6472">LiteTopic 的百万级队列同样落在这一套 CommitLog 上——变轻的是元数据与订阅层，不是存储。</text>
+  </svg>
+  <p>RocketMQ 的存储分两层。<b>CommitLog</b> 是消息体本身：所有 Topic 的消息<b>混合顺序追加</b>到同一组文件（默认 1G 滚动），把磁盘写变成顺序写——这是高吞吐的根源。
+  <b>ConsumeQueue</b> 是按队列构建的消费索引：每条条目仅 20 字节（CommitLog 偏移 + 消息大小 + Tag 哈希），消费侧先读索引定位、再回 CommitLog 取消息体；
+  <b>IndexFile</b> 是可选的按消息 key 反查索引。这套设计的代价是消费读偏随机（靠 page cache 缓解），换来写侧永远顺序、"多一个队列"只多一份轻量索引。</p>
+
+  <h4>发送侧数据流</h4>
+  <ol>
+    <li><b>路由发现</b>：Producer 从 NameServer 拉取"该 Topic 在哪些 Broker、各有几个队列"，本地缓存、30s 刷新。</li>
+    <li><b>选队列</b>：默认轮询各队列摊开负载；顺序消息按 ShardingKey 哈希固定到某一队列（见 2.4）。</li>
+    <li><b>发往 Master</b>：同步 / 异步 / oneway 三种语义；同步发送失败默认换一台 Broker 重试。</li>
+    <li><b>落盘</b>：Master 追加 CommitLog，写入 page cache 即返回成功（刷盘可配同步 / 异步）；随后<b>异步</b> dispatch 构建 ConsumeQueue 与 IndexFile。</li>
+    <li><b>复制</b>：Slave 从 Master 拉取复制；同步双写要等 Slave 确认才向 Producer 返回成功，用延迟换主从切换不丢消息。</li>
+  </ol>
+
+  <h4>消费侧数据流</h4>
+  <ol>
+    <li><b>路由发现</b>：与发送侧相同，拉取并缓存 Topic 的队列列表。</li>
+    <li><b>分队列</b>：4.0 Pull 模式客户端做 rebalance——把 Topic 的队列平均分给 Group 内各实例，每 20s 或实例增减时重算；5.0 Pop 模式由 Broker 侧派发消息，客户端无状态、不再 rebalance。</li>
+    <li><b>拉取</b>：SDK 按 offset 向 Broker 拉消息；无消息时 Broker 用<b>长轮询</b> hold 住请求，新消息到达立即返回——Push 的实时感由此而来。</li>
+    <li><b>业务回调</b>：PushConsumer 对外是回调接口，内部仍是拉取循环；第 4 章的限流回调就插在这一步。</li>
+    <li><b>进度提交</b>：消费成功提交 offset；集群模式进度存 Broker 侧，实例重启后从原位置继续——这是"断点续传"的凭据。</li>
+    <li><b>重试与死信</b>：消费失败的消息进入重试主题 <code>%RETRY%+Group</code> 按退避间隔重投；默认 16 次仍失败进入死信主题 <code>%DLQ%+Group</code>，等待人工处理。</li>
+  </ol>
+
+  <h4>两种消费模式，与 LiteTopic 的变与不变</h4>
+  <p><b>集群消费</b>：一条消息只被 Group 内一个实例消费，进度存 Broker——默认模式，也是案例所用；<b>广播消费</b>：每个实例都消费全量，进度存本地，适合本地缓存刷新这类场景。
+  传统模型还有订阅一致性、队列级顺序两条刚性约束，它们的边界在 2.4 讨论。</p>
+  <p>对照这张全景图，LiteTopic 的改动集中在<b>元数据与订阅层</b>，而非存储层：消息仍落同一套 CommitLog，路由仍走 NameServer——所以父 Topic 必须是真实传统 Topic、要预创建；
+  变轻的是其下的队列（自动创建、TTL 回收、百万级），变灵活的是订阅（同 Group 不同实例订不同子集），拉取侧新增的是 Suspend 开关。
+  理解"什么没变"，才能理解它为什么能平滑长在现有 RocketMQ 生态上。</p>
+  <div class="tip"><b>本节要点</b>：NameServer 只管路由（30s 级轮询、无推送），Broker 管存储转发；CommitLog 顺序写 + ConsumeQueue 索引读；
+  发送直连 Master、消费按 offset 拉取、重试/死信兜底；LiteTopic 改元数据与订阅层、不改存储骨架。</div>
+
+  <h3>2.4 传统消费模型的能力边界</h3>
+  <p>有了 2.3 的全景，再看这套模型（RocketMQ 为 Apache 顶级项目，传统模型与 Kafka 等一致）在"每个用户/每个会话一条独立通道"场景下的边界：<span class="src">周礼分享讲稿</span></p>
+  <ul>
+    <li><b>隔离单元是队列</b>：队列内 FIFO、队列间并发（机制见 2.3），治理只能到队列级，到不了"用户"。</li>
+    <li><b>Group 共享消费</b>：队列被组内机器分摊，请求落到任意一台；4.0 是队列分配 Pull，5.0 是无状态 Pop。<span class="src">PPT s07</span></li>
+    <li><b>订阅一致性约束</b>：同一 Group 下所有客户端必须订阅完全相同的 Topic 集合，否则订阅不一致会导致堆积甚至丢失。</li>
+    <li><b>顺序消息</b>：同一业务 ID 哈希到固定队列保证顺序，但不同业务 ID 可能共享同一队列。</li>
+  </ul>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s07.jpg" alt="原 slide s07：传统消费模型，基于 Group 的共享消费" loading="lazy">
+    <figcaption><span class="ftag">PPT s07</span><span class="ftxt">上下两行分别对应 4.0 队列分配 Pull 与 5.0 无状态 Pop：队列被 Group 内机器分摊，隔离单元是队列而非用户——正文四条约束的可视化原版。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <p>这套模型服务"少量 Topic、同类任务"没有问题；但当你要给<b>每个用户/每个会话</b>一条独立通道时，三个痛点暴露（第 4 章详述）：
+  元数据重、创建生效慢；订阅一致性逼你"一客户一组机器"；共享队列的株连效应。
+  沙龙 PPT 给出的量级对比：传统 Topic 商业实例上限约 <b>3,000</b>，而 LiteTopic 支撑 <b>20 万～千万级</b>。<span class="src">沙龙报告 3 PPT</span></p>
+  <div class="warn"><b>能不能绕过？</b>PPT 专门回答了"复用现有方式、每个客户端用独立 Group 订阅多个 Topic"是否可行——<b>不可行</b>，五条理由：
+  ① 读请求数量急剧膨胀；② 轮询导致的无效扫描增多、CPU 开销增大；③ 无法支持独占订阅；④ Topic 要预先创建；⑤ 客户端与各自 Group 绑定，使用很不方便。<span class="src">PPT s09</span></div>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s09.jpg" alt="原 slide s09：传统 Group 与 LiteTopic 订阅模型对比" loading="lazy">
+    <figcaption><span class="ftag">PPT s09</span><span class="ftxt">左：传统 Group 订阅模型 vs LiteTopic 差异化订阅；右：队列数量膨胀后客户端订阅关系集合从 2 个变 N 个的"量变"示意——正文五条不可行理由对应的原图。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <div class="tip"><b>本节要点</b>：固定窗口管上限、漏桶管节奏、MQ 管缓冲；漏桶外置是为了不压垮网关进程；
+  传统 Topic/Group 的隔离单元是"队列"且订阅刚性，撑不起"百万用户各一条流"。</div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="ch" id="ch3">
+  <span class="kicker">CHAPTER 03</span>
+  <h2>LiteTopic 机制详解：把重资产变成轻资产</h2>
+  <p class="lead">本章是技术核心：四个特性 + 两个工程机制（Ready Set、Suspend），并用模拟器亲手验证。</p>
+
+  <h3>3.1 定义与四个核心特性</h3>
+  <p>LiteTopic 是 RocketMQ 5.x 引入的<b>轻量级队列形态</b>，定位为面向 AI Agent 场景的轻量异步消息/事件载体。
+  它挂在父 Topic（Parent Topic）之下：传统 Topic 一个都不用多建，建一个父 Topic，其下全部用 LiteTopic 承载。<span class="src">讲稿 / 沙龙 PPT</span></p>
+  <table>
+    <tr><th>特性</th><th>机制</th><th>与传统 Topic 的差异</th></tr>
+    <tr><td><b>动态创建与销毁</b></td><td>发送时队列不存在即自动创建；不活跃超 TTL 自动回收，释放配额，资源零泄漏</td><td>传统需预创建、审批、配路由，生效几十秒量级</td></tr>
+    <tr><td><b>低成本·海量规模</b></td><td>单 Broker 百万级队列；单客户端可订阅上万个 LiteTopic</td><td>传统商业实例约 3,000 Topic 上限</td></tr>
+    <tr><td><b>差异化订阅</b></td><td>同一 Group 下不同实例可订阅不同 LiteTopic 子集，不引发堆积或丢失；订阅从"刚性约束"变"按需路由"</td><td>传统要求组内订阅完全一致</td></tr>
+    <tr><td><b>顺序消费</b></td><td>单个 LiteTopic 天然 FIFO；需要并发时按名字拆分队列（如 user-1 / user-2），拆分零成本</td><td>传统顺序消息靠 ShardingKey 哈希，不同业务可能共享队列</td></tr>
+  </table>
+  <figure class="reveal">
+    <img src="assets/asset-compare.png" alt="隔离单元对比：传统 Topic 隔离单元是队列，LiteTopic 隔离单元是用户" loading="lazy">
+    <figcaption>隔离单元对比：传统 Topic 的治理只能到队列级；LiteTopic 让"一个用户一条消息流"成为原生原语（资产中心文章配图）</figcaption>
+  </figure>
+
+  <h3>3.2 Ready Set：百万订阅下的事件驱动拉取</h3>
+  <p>同时几十万 User + Model 并发是日常态。若沿用"对每个订阅的 LiteTopic 各发起一个独立 Pull 循环"的传统做法，
+  开销随订阅数线性增长——本质和 select/poll 一样：每次调用遍历全量集合，大部分遍历无效。<span class="src">网关实践文章</span></p>
+  <p>LiteTopic 在 Broker 侧引入<b>就绪集合（Ready Set）</b>事件驱动机制，思路类似 epoll：每个客户端有自己的 ready set，
+  只有真正有新消息写入的 LiteTopic 才进入集合；Pull 时 Broker 只读取就绪队列，集合为空则长轮询等待事件触发
+  （新消息到达、ACK 后仍有未消费消息、顺序锁释放等）。Pull 开销只与"当前时刻就绪的队列数"成正比，而非总订阅数。<span class="src">文章 / 讲稿</span></p>
+  <p>PPT 把这套订阅拉取模型拆成四步：① <b>订阅关系注册</b>——客户端增加/删除订阅注册到服务端、分片存储；
+  ② <b>百万队列</b>——每个 LiteTopic 对应一个逻辑队列，消息存储时自动创建；③ <b>事件分发</b>——每个客户端有专属事件队列，按订阅关系集合批量分发；
+  ④ <b>事件读取</b>——一个客户端的读取请求归一化，不必为每个 LiteTopic 发起读请求，直接读事件队列减少开销。
+  设计原则一句话：<b>数据面与控制面分离、推拉结合、事件驱动</b>。<span class="src">PPT s10</span></p>
+  <svg class="diagram" viewBox="0 0 900 240" role="img" aria-label="Ready Set 事件驱动示意">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#5b6472"/></marker></defs>
+    <text x="20" y="28" font-size="15" font-weight="700" fill="#0e1a2b">写入侧：百万 LiteTopic，只有活跃者进入就绪集合</text>
+    <g font-size="12" fill="#33405a">
+      <rect x="20" y="50" width="120" height="34" rx="6" fill="#dbeafe" stroke="#2563eb"/><text x="80" y="72" text-anchor="middle">lite-A 有新消息</text>
+      <rect x="20" y="94" width="120" height="34" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/><text x="80" y="116" text-anchor="middle">lite-B 空闲</text>
+      <rect x="20" y="138" width="120" height="34" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/><text x="80" y="160" text-anchor="middle">lite-C 空闲</text>
+      <rect x="20" y="182" width="120" height="34" rx="6" fill="#dcfce7" stroke="#16a34a"/><text x="80" y="204" text-anchor="middle">lite-D 有新消息</text>
+    </g>
+    <path d="M140,67 C220,67 240,110 300,110" stroke="#2563eb" fill="none" marker-end="url(#ar)"/>
+    <path d="M140,199 C220,199 240,130 300,130" stroke="#16a34a" fill="none" marker-end="url(#ar)"/>
+    <rect x="300" y="86" width="180" height="68" rx="10" fill="#fff1e6" stroke="#ff6a00" stroke-width="2"/>
+    <text x="390" y="114" text-anchor="middle" font-size="14" font-weight="700" fill="#ff6a00">Ready Set（每客户端）</text>
+    <text x="390" y="136" text-anchor="middle" font-size="12" fill="#7a4a26">{ lite-A, lite-D }</text>
+    <path d="M480,120 L560,120" stroke="#5b6472" marker-end="url(#ar)"/>
+    <rect x="560" y="86" width="150" height="68" rx="10" fill="#0e1a2b"/>
+    <text x="635" y="114" text-anchor="middle" font-size="13" fill="#fff">Pull 只读就绪队列</text>
+    <text x="635" y="136" text-anchor="middle" font-size="12" fill="#8fa3bf">空集合 → 长轮询等待</text>
+    <path d="M710,120 L780,120" stroke="#5b6472" marker-end="url(#ar)"/>
+    <rect x="780" y="92" width="100" height="56" rx="10" fill="#ccfbf1" stroke="#0d9488"/>
+    <text x="830" y="125" text-anchor="middle" font-size="13" fill="#0d9488">消费线程池</text>
+    <text x="20" y="232" font-size="12" fill="#5b6472">开销 ∝ 就绪队列数，而非总订阅数（epoll 思路；代价是内存换时间，见 3.5 性能数据）</text>
+  </svg>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s10.jpg" alt="原 slide s10：LiteTopic 订阅拉取模型四步" loading="lazy">
+    <figcaption><span class="ftag">PPT s10</span><span class="ftxt">官方订阅拉取模型：订阅关系集合分片存储、事件按客户端专属事件队列批量分发、读取归一化。上方 SVG 画的是写入侧 Ready Set，此图补全读侧链路。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+
+  <h3>3.3 Suspend：Broker 级拉取流控</h3>
+  <p>业务在消费回调中返回 <code>Suspend N</code>（毫秒），Broker 即在 N 毫秒内<b>暂停对该 LiteTopic 的拉取</b>，
+  且不影响其他 LiteTopic 的拉取节奏；到期自动恢复。这是漏桶在 Broker 层落地的关键开关。<span class="src">网关实践文章</span></p>
+  <p>它与"消费线程 Sleep"的本质区别在于<b>谁为等待买单</b>。PPT 还点出一个容易忽略的前提：
+  传统"抢占 + 线程池"架构下，线程被长耗时任务占用就无法释放——<b>即使队列已经物理隔离，仍会导致资源卡死</b>；
+  所以隔离必须配合非阻塞线程池模型才完整。<span class="src">PPT s11</span></p>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s11.jpg" alt="原 slide s11：线程池阻塞模型与非阻塞模型对比" loading="lazy">
+    <figcaption><span class="ftag">PPT s11</span><span class="ftxt">左：阻塞模型下限流任务占住线程（限流列贯穿线程池）；右：非阻塞模型下 Suspend 返回后线程立即释放、继续服务其他用户——"谁为等待买单"的原版对照图。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <div class="grid2">
+    <div class="card" style="border-top:4px solid var(--red)">
+      <h4 style="margin-top:0">Thread.sleep(N)：线程级阻塞</h4>
+      <p>被限流的队列占住一个消费线程不释放。多租户共享线程池时，限流会<b>传染</b>：被限流队列越多，空闲线程越少，
+      正常租户拿不到线程而堆积——限流伤到了不该被限流的人。</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--green)">
+      <h4 style="margin-top:0">Suspend N：Broker 级流控</h4>
+      <p>消费线程返回后<b>立即释放回线程池</b>，转头服务其他队列；被 Suspend 的队列由 Broker 在 N 毫秒后重投，
+      等待期间不占客户端任何线程。无论多少租户被限流，剩余租户始终有空闲线程可用。</p>
+    </div>
+  </div>
+  <p>POC 对比（订阅 50 个 LiteTopic、线程池 50 线程、前 5 个随机触发 300ms 限流）：<span class="src">网关实践文章</span></p>
+  <ul>
+    <li><b>Sleep 300</b>：被限流数增至 40 个时线程池几乎耗尽，剩下 10 个正常 LiteTopic 拿不到线程全部堆积。</li>
+    <li><b>Suspend 300</b>：仅被限流的 5 个堆积，其余 45 个正常。</li>
+  </ul>
+  <p>精度与组合：当前 Suspend 最小粒度 <b>30 毫秒</b>；更细的速率控制由消费侧局部 Sleep 补充（亚毫秒级节奏控制，持续时间极短、对线程池影响可控）。
+  百炼实际是两者组合：Suspend 承担主要漏桶调速，Sleep 只在极少数亚 30ms 精度场景补充。
+  若目标速率非常高，要把 Suspend 步长与并发线程数放在一起算实际放行速率，避免阶梯感传导到 P99 RT。<span class="src">网关实践文章</span></p>
+
+  <h3>3.4 动手实验：多租户限流模拟器</h3>
+  <p>下面的模拟器把上述机制做成可调节的实验台：每个租户一条队列（一个漏桶），共享一个消费线程池。
+  切换 <b>Suspend / Sleep / 直接拒绝</b> 三种模式，观察"限流传染"是否发生；给某个租户注入突发，看隔离是否成立。所有参数即时生效。</p>
+  <div class="simwrap">
+    <h3>多租户漏桶实验台</h3>
+    <div class="simgrid">
+      <div class="controls">
+        <h4>参数（即时生效）</h4>
+        <div class="ctl"><label>总到达速率 <b id="vArr">60 req/s</b></label><input type="range" id="cArr" min="10" max="240" step="5" value="60"></div>
+        <div class="ctl"><label>单桶放行速率 <b id="vDrain">12 req/s</b></label><input type="range" id="cDrain" min="2" max="60" step="1" value="12"></div>
+        <div class="ctl"><label>桶容量（堆积上限） <b id="vCap">300</b></label><input type="range" id="cCap" min="50" max="1500" step="50" value="300"></div>
+        <div class="ctl"><label>租户数 <b id="vTen">6</b></label><input type="range" id="cTen" min="2" max="12" step="1" value="6"></div>
+        <div class="ctl"><label>共享线程池 <b id="vThr">8 线程</b></label><input type="range" id="cThr" min="2" max="16" step="1" value="8"></div>
+        <div class="ctl"><label>Suspend / Sleep 时长 <b id="vSus">600 ms</b></label><input type="range" id="cSus" min="100" max="3000" step="100" value="600"></div>
+        <div class="ctl"><label>限流模式</label><select id="cMode"><option value="suspend" selected>Suspend（Broker 级暂停）</option><option value="sleep">Sleep（线程级阻塞）</option><option value="reject">直接拒绝（两态限流·不排队）</option></select></div>
+        <div class="ctl"><label>模拟速度</label><select id="cSpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></div>
+        <div class="btnrow">
+          <button class="btn btn-run" id="bRun">暂停</button>
+          <button class="btn btn-ghost" id="bReset">重置</button>
+          <button class="btn btn-burst" id="bBurst">给租户 2 注入突发</button>
+        </div>
+      </div>
+      <div class="simview">
+        <div class="simstats">
+          <div class="stat pass"><div class="n" id="sPass">0</div><div class="l">累计放行</div></div>
+          <div class="stat q"><div class="n" id="sQueue">0</div><div class="l">当前排队</div></div>
+          <div class="stat rej"><div class="n" id="sRej">0</div><div class="l">累计拒绝</div></div>
+          <div class="stat"><div class="n" id="sThr">0/8</div><div class="l">线程占用（含 Sleep）</div></div>
+        </div>
+        <canvas id="sim" height="330"></canvas>
+        <div id="simhint">提示：先保持 Suspend 模式点"注入突发"，再切到 Sleep 模式对比——观察正常租户的队列是否开始堆积。</div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>实验解读</b>：Sleep 模式下被限流租户占住线程，线程占用条会顶满，未限流租户的队列随之增长（传染）；
+  Suspend 模式下被限流租户显示"已挂起"，线程立即释放，其余租户放行速率不受影响；直接拒绝模式不排队，超出放行能力的突发立刻变成拒绝计数（传统两态限流）——
+  对比可见"等几秒再处理"几乎总优于"被 429"。</div>
+
+  <h3>3.5 性能数据与边界（来自 POC 与现场 Q&A）</h3>
+  <table>
+    <tr><th>指标</th><th>数据</th><th>来源</th></tr>
+    <tr><td>海量订阅消费延迟</td><td>单 Broker 200 客户端 × 1 万 LiteTopic（共 200 万队列），平均消费延迟稳定 12ms；讲稿口径 10–20ms</td><td>文章 POC / 讲稿</td></tr>
+    <tr><td>单通道消费 QPS</td><td>顺序消费口径约 8,000–10,000 / 秒 / 通道</td><td>现场 Q&A</td></tr>
+    <tr><td>端到端时延</td><td>与传统顺序消息无明显差别；比普通并发消费慢约 5–10ms</td><td>现场 Q&A</td></tr>
+    <tr><td>单通道写入峰值</td><td>低于传统多队列 Topic；解法是按名字零成本拆分（user-1 / user-2 / user-3）</td><td>现场 Q&A</td></tr>
+    <tr><td>Ready Set 代价</td><td>内存换时间：内存消耗比轮询模型高，但抹平了时间开销；几千到十万队列规模下开销与传统基本无区别</td><td>现场 Q&A</td></tr>
+  </table>
+  <div class="tip"><b>本节要点</b>：四特性把"隔离"变成命名规则问题；Ready Set 让 Pull 开销与就绪数成正比；
+  Suspend 把等待成本从客户端线程转移到 Broker 调度，是多租户公平性的关键；性能边界（单通道峰值、30ms 步长）都有明确解法。</div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="ch" id="ch4">
+  <span class="kicker">CHAPTER 04 · 案例一</span>
+  <h2>百炼网关：分布式漏桶矩阵，限流比降 10 倍</h2>
+  <p class="lead">完整复盘：旧方案三痛点 → 重构架构 → 三段代码 → 策略实例 → 工程经验。</p>
+
+  <h3>4.1 旧方案：一客户一 Topic，为什么撑不住</h3>
+  <p>百炼最早的做法：为每个 User + Model 单独建 Topic 与 Consumer Group，再部署一组消费机器专门负责这条链路。
+  头部客户陆续接入后三个痛点暴露：<span class="src">网关实践文章</span></p>
+  <ol>
+    <li><b>元数据重、生效慢</b>：传统 Topic/Group 需预创建，生效几十秒量级，新用户突发到来时出现短时间异常。</li>
+    <li><b>机器利用率低、成本随客户数膨胀</b>：订阅一致性要求同 Group 订阅完全相同，要隔离就得每客户单独建 Group 甚至切机器；客户今天零消息，名下机器仍要常驻。</li>
+    <li><b>单 Topic 暴涨的株连效应</b>：硬把多客户塞进同一 Topic，某用户消息激增会占满几乎所有消费线程，其他用户全部阻塞；团队被迫退回"一客户一组机器"，用机器规模换隔离强度。</li>
+  </ol>
+  <p>结论：传统方案能服务"少数几个头部突发客户"，但无法支撑"任意中大型客户自动接入漏桶"。
+  当限流要从"个别 VIP 待遇"变成"平台基础能力"，底层必须重新设计。</p>
+  <p>PPT 从另一侧总结了 AI 场景的五条限流需求（资源隔离／流量互不干扰／动态订阅管理／细粒度限流／平滑限流——"不是粗暴拒绝，顺延到下个窗口体验更优"），
+  以及传统消费限流的三条局限：<b>相互影响</b>（单用户慢任务阻塞他人，无法物理隔离）、<b>吞吐受限</b>（限流等待 block 线程，影响整个系统吞吐量）、
+  <b>队列不足</b>（需提前创建 High/Mid/Low 等多个 Topic/队列，数量有限、粒度粗，难以支撑差异化）。<span class="src">PPT s16</span></p>
+
+  <h3>4.2 重构架构：发送、订阅、限流各一段</h3>
+  <svg class="diagram" viewBox="0 0 940 300" role="img" aria-label="百炼网关分布式漏桶矩阵架构">
+    <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#5b6472"/></marker></defs>
+    <text x="20" y="26" font-size="15" font-weight="700" fill="#0e1a2b">分布式漏桶矩阵：每个 User+Model 一个独立漏桶，共享一组消费 Pod</text>
+    <g font-size="12">
+      <rect x="20" y="48" width="110" height="30" rx="6" fill="#dbeafe" stroke="#2563eb"/><text x="75" y="68" text-anchor="middle" fill="#1e3a8a">用户 A · 模型 X</text>
+      <rect x="20" y="86" width="110" height="30" rx="6" fill="#dbeafe" stroke="#2563eb"/><text x="75" y="106" text-anchor="middle" fill="#1e3a8a">用户 B · 模型 X</text>
+      <rect x="20" y="124" width="110" height="30" rx="6" fill="#dbeafe" stroke="#2563eb"/><text x="75" y="144" text-anchor="middle" fill="#1e3a8a">用户 C · 模型 Y</text>
+      <rect x="20" y="162" width="110" height="30" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/><text x="75" y="182" text-anchor="middle" fill="#64748b">…百万租户</text>
+    </g>
+    <path d="M130,63 L190,63" stroke="#5b6472" marker-end="url(#ar2)"/><path d="M130,101 L190,101" stroke="#5b6472" marker-end="url(#ar2)"/><path d="M130,139 L190,139" stroke="#5b6472" marker-end="url(#ar2)"/>
+    <rect x="190" y="40" width="150" height="160" rx="10" fill="#fff" stroke="#ff6a00" stroke-width="2"/>
+    <text x="265" y="62" text-anchor="middle" font-size="13" font-weight="700" fill="#ff6a00">网关发送侧</text>
+    <text x="265" y="84" text-anchor="middle" font-size="11.5" fill="#33405a">① 固定窗口基础限流</text>
+    <text x="265" y="104" text-anchor="middle" font-size="11.5" fill="#33405a">② 按 user+model 命名</text>
+    <text x="265" y="124" text-anchor="middle" font-size="11.5" fill="#33405a">③ setLiteTopic 发送</text>
+    <text x="265" y="144" text-anchor="middle" font-size="11.5" fill="#33405a">不存在 → 自动创建</text>
+    <path d="M340,120 L400,120" stroke="#5b6472" marker-end="url(#ar2)"/>
+    <rect x="400" y="40" width="220" height="160" rx="10" fill="#fff7ed" stroke="#d97706"/>
+    <text x="510" y="62" text-anchor="middle" font-size="13" font-weight="700" fill="#d97706">LiteTopic 漏桶矩阵（Broker 磁盘）</text>
+    <g font-size="11">
+      <rect x="415" y="76" width="40" height="100" rx="6" fill="#fff" stroke="#2563eb"/><rect x="419" y="140" width="32" height="32" fill="#93c5fd"/><text x="435" y="192" text-anchor="middle" fill="#33405a">A-X</text>
+      <rect x="465" y="76" width="40" height="100" rx="6" fill="#fff" stroke="#dc2626"/><rect x="469" y="90" width="32" height="82" fill="#fca5a5"/><text x="485" y="192" text-anchor="middle" fill="#33405a">B-X</text>
+      <rect x="515" y="76" width="40" height="100" rx="6" fill="#fff" stroke="#16a34a"/><rect x="519" y="152" width="32" height="20" fill="#86efac"/><text x="535" y="192" text-anchor="middle" fill="#33405a">C-Y</text>
+      <rect x="565" y="76" width="40" height="100" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="585" y="130" text-anchor="middle" fill="#94a3b8">…</text>
+    </g>
+    <path d="M620,120 L680,120" stroke="#5b6472" marker-end="url(#ar2)"/>
+    <rect x="680" y="40" width="150" height="160" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+    <text x="755" y="62" text-anchor="middle" font-size="13" font-weight="700" fill="#0d9488">统一消费 Pod 组</text>
+    <text x="755" y="84" text-anchor="middle" font-size="11.5" fill="#33405a">通配符订阅父 Topic</text>
+    <text x="755" y="104" text-anchor="middle" font-size="11.5" fill="#33405a">回调内限流判断：</text>
+    <text x="755" y="124" text-anchor="middle" font-size="11.5" fill="#33405a">命中 → Suspend N</text>
+    <text x="755" y="144" text-anchor="middle" font-size="11.5" fill="#33405a">未命中 → 调模型 + ACK</text>
+    <path d="M830,120 L880,120" stroke="#5b6472" marker-end="url(#ar2)"/>
+    <rect x="880" y="86" width="50" height="68" rx="8" fill="#0e1a2b"/><text x="905" y="116" text-anchor="middle" font-size="12" fill="#fff">GPU</text><text x="905" y="134" text-anchor="middle" font-size="11" fill="#8fa3bf">池</text>
+    <text x="20" y="232" font-size="12" fill="#5b6472">桶容量 = 堆积上限 + TTL；出水速率 = 消费侧 Suspend 时长动态决定；资源池随总流量伸缩，而非按客户数线性增长</text>
+    <text x="20" y="256" font-size="12" fill="#5b6472">新增客户：发送侧自动建、消费侧自动拉 —— 无需改代码、无需重启、无需扩机器</text>
+  </svg>
+  <figure class="reveal">
+    <img src="assets/gw-fig1.png" alt="百炼 × RocketMQ LiteTopic 精细化限流架构：网关固定窗口管硬上限，LiteTopic 漏桶矩阵管节奏，统一消费组通配订阅，Suspend 细粒度调速" loading="lazy">
+    <figcaption>原文官方架构图：网关固定窗口管硬上限（TPM/TPS）· LiteTopic 漏桶矩阵管节奏 · Suspend 实现细粒度调速（网关实践文章配图）</figcaption>
+  </figure>
+  <p>三段核心代码（简化示意，展示核心调用逻辑）：<span class="src">网关实践文章</span></p>
+<pre><code><span class="c">// ① 网关侧：按 user + model 路由到对应 LiteTopic（新增的一行）</span>
+Message msg = <span class="k">new</span> Message(parentTopic, payload);
+msg.<span class="f">setLiteTopic</span>(<span class="f">buildLiteTopicName</span>(user, model));
+producer.<span class="f">send</span>(msg);
+
+<span class="c">// ② 消费侧：一次通配符订阅，覆盖当前和未来所有 LiteTopic</span>
+PushConsumer consumer = <span class="k">new</span> PushConsumer(<span class="s">"bailian-rate-limit-group"</span>);
+consumer.<span class="f">subscribe</span>(<span class="s">"bailian-rate-limit-parent"</span>, <span class="s">"*"</span>);
+consumer.<span class="f">start</span>();
+
+<span class="c">// ③ 限流逻辑：命中策略则 Suspend，仅暂停该 LiteTopic 的拉取</span>
+<span class="k">@Override</span>
+<span class="k">public</span> ConsumeResult <span class="f">consume</span>(MessageView msg) {
+    String liteTopic = msg.<span class="f">getLiteTopic</span>();
+    <span class="k">long</span> suspendMs = rateLimitPolicy.<span class="f">acquireOrSuspend</span>(liteTopic);
+    <span class="k">if</span> (suspendMs &gt; 0) {
+        <span class="k">return</span> ConsumeResult.<span class="f">Suspend</span>(suspendMs);
+    }
+    <span class="f">invokeModel</span>(msg);
+    <span class="k">return</span> ConsumeResult.SUCCESS;
+}</code></pre>
+
+  <p>PPT 的工作流图给出两个工程细节：父 Topic 实名 <code>rate-limit-parent-topic</code>，其下 LiteTopic 带 <b>Active / Suspended</b> 消费状态
+  （限流中暂停消费 300ms、消息持续堆积、不影响其他 LiteTopic）；消费侧是"<b>有资源才消费</b>"——消费节点按 GPU 推理实例的可用算力拉取，弹性扩缩容，
+  限流策略由独立 RateLimiter 组件检查。<span class="src">PPT s19</span></p>
+  <h3>4.3 为什么 LiteTopic 是漏桶的天然载体</h3>
+  <p>PPT 用四个词概括这套能力：<b>物理隔离</b>（每个用户/会话独立 LiteTopic，资源完全独立、彻底消除交叉干扰）、
+  <b>弹性创建</b>（按需自动创建、支持百万级）、<b>精准流控</b>（每个 LiteTopic 独立执行限流策略、按用户配置差异化阈值，实现"千人千面"的个性化流量治理）、
+  <b>消费挂起</b>（超限时优雅地"请用户稍等片刻"，既保护系统资源又保证体验）。<span class="src">PPT s17</span></p>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s17.jpg" alt="原 slide s17：四个能力词与每用户限流窗口示意" loading="lazy">
+    <figcaption><span class="ftag">PPT s17</span><span class="ftxt">左侧四能力卡片正文已述；右图增量：三条用户队列各自穿过 Rate Limiting Window（Non-Block），输出速率按用户整形，Suspend 构成反馈回路。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <ul>
+    <li><b>桶容量工程意义上近似无限</b>：进程内漏桶容量是写死的数字、桶满即拒；LiteTopic 持久化到 Broker 磁盘、单实例百万级队列、彼此物理隔离。"等几秒再处理"几乎在所有场景下都优于"被 429"。</li>
+    <li><b>每个 User + Model 独立漏桶</b>：租户隔离变成命名规则问题——A 的模型 X 进 liteTopic-A-X，B 的进 liteTopic-B-X；A 堵了不会通过任何共享资源传染到 B。隔离从"靠业务代码维护"变"靠基础设施天然提供"。</li>
+    <li><b>每个漏桶速率独立、动态可调</b>：Suspend N 由业务策略实时计算，毫秒级调整任意漏桶放行速度——重要客户在高负载时仍拿较高节奏；模型扩容到位后矩阵速率同步上调；某模型拥塞只收紧对应那一列，不拖累其他模型。全程不重启消费组、不改配置、客户无感知。</li>
+  </ul>
+
+  <h3>4.4 策略实例：Suspend 时长就是调度语言</h3>
+  <p>PPT 给出官方的四档 Suspend 策略表——<b>Suspend 时长就是调度语言</b>：<span class="src">PPT s18</span></p>
+  <table>
+    <tr><th>限流级别</th><th>Suspend 时长</th><th>适用场景</th></tr>
+    <tr><td>轻度限流</td><td>50 ~ 200 ms</td><td>突发限流，平滑到下个窗口</td></tr>
+    <tr><td>中度限流</td><td>200 ~ 1000 ms</td><td>明显降低消费速率</td></tr>
+    <tr><td>重度限流</td><td>1000 ~ 5000 ms</td><td>接近暂停消费</td></tr>
+    <tr><td>忙闲调度</td><td>5 min ~ 8 hrs</td><td>批量任务闲时处理</td></tr>
+  </table>
+  <p>讲稿中的真实策略实例与之对应，帮助理解业务意图：<span class="src">周礼分享讲稿</span></p>
+  <table>
+    <tr><th>场景</th><th>Suspend 时长</th><th>业务语义</th></tr>
+    <tr><td>轻度限流：当前窗口额度不够</td><td>50–100ms</td><td>把这波请求推到下一个窗口</td></tr>
+    <tr><td>明显控速：量太大</td><td>1–2s</td><td>压低该用户放行节奏</td></tr>
+    <tr><td>优先级调度：下游资源不足、任务不重要</td><td>可达 10 小时</td><td>把白天任务移到晚上，让位给高优先级业务（集团内调用让位公有云客户）</td></tr>
+    <tr><td>同步转异步：核心用户不接受失败</td><td>入专属队列慢慢消费</td><td>普通用户超限直接返回失败；关键用户从同步转异步排队，业务不至于有损</td></tr>
+  </table>
+  <div class="note"><b>口径说明</b>：上表为讲稿口述的真实策略实例（含"停 10 个小时"这类极端忙闲调度）；前一张四档表是 PPT 给出的产品化档位（忙闲调度 5min~8hrs）。
+  两者是"口述实例 vs 产品档位"的关系，数值范围不完全重合属正常，引用时请注明出处。</div>
+  <p>沙龙 PPT 还给出落地适配与插件化抽象：四个适配（<b>海量</b>：为 userId / userId+model / APIkey 建独立队列；<b>动态</b>：Diamond 配置入口即生效；<b>Suspend 语义</b>：毫秒到小时级挂起；<b>精准订阅</b>：放行通知回到用户连接机器），
+  效果为限流异常比例下降 <b>10×</b>；通用插件 <code>spring-cloud-gateway-rocketmq-ratelimiter</code> 业务方只需实现 <code>Resolver</code> / <code>PostCounter</code> 两个 SPI，其余自动装配；
+  五项开箱能力：削峰不阻塞、多维度同时限流、按结果计量、单机/分布式可插拔、Spring Boot Starter 一键集成。<span class="src">沙龙报告 3 PPT</span></p>
+  <figure class="ppt reveal">
+    <img src="assets/salon-p055.png" alt="沙龙报告 3 第 55 页：四个适配与用户级挂起示意、10 倍效果" loading="lazy">
+    <figcaption><span class="ftag salon">沙龙报告 3 · p55</span><span class="ftxt">右图增量：一人一条 lite 队列，用户 B"触发限流 → 挂起消费"、其余用户正常消费，队列间逻辑隔离、到期自动恢复；底部效果条限流异常比例下降 10×。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+  <figure class="ppt reveal">
+    <img src="assets/salon-p057.png" alt="沙龙报告 3 第 57 页：限流插件组件架构" loading="lazy">
+    <figcaption><span class="ftag salon">沙龙报告 3 · p57</span><span class="ftxt">插件组件架构增量：核心过滤器编排 PASS / QUEUE / REJECT 三态，业务只实现 Resolver / PostCounter 两个 SPI，桶与队列层可在内存 / Redis / RocketMQ 实现间插拔。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+
+  <h3>4.5 四条工程经验</h3>
+  <ol>
+    <li><b>限流是分层组合</b>：固定窗口管硬上限、漏桶管放行节奏、消息队列管承接缓冲，三层串联缺一不可。</li>
+    <li><b>漏桶的物理载体决定上限</b>：突发可能压垮网关进程时，漏桶必须外置；选 MQ 要追问百万级队列、按需创建、流控粒度三问。</li>
+    <li><b>隔离是刚需，但隔离成本必须更低</b>：LLM 一次请求消耗数秒 GPU 时间，被挤占损失的不只是成功率还有已消耗的昂贵算力；"每租户切一组机器"成本乘法膨胀不可持续。LiteTopic 让隔离强度不降、成本从乘法变回加法。</li>
+    <li><b>Suspend 与 Sleep 各有适用，关键是谁为等待买单</b>：Suspend 适合粗粒度长时间等待；Sleep 适合极短的处理等待（亚 30ms 精度补充）。</li>
+  </ol>
+  <div class="tip"><b>本节要点</b>：重构的核心不是算法新颖，而是找到让隔离、调速、弹性同时成立的工程载体；
+  业务结果限流比降 10 倍；该范式可复用于任何"GPU 稀缺 + 海量租户 + 突发尖峰"的平台。</div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="ch" id="ch5">
+  <span class="kicker">CHAPTER 05 · 案例二</span>
+  <h2>百炼资产中心：一人一 Topic 的用户级治理</h2>
+  <p class="lead">同一个原语的第二种用法：不是漏桶，而是把"用户"变成消息系统的原生隔离单元。</p>
+
+  <h3>5.1 业务链路：从临时链接到长期资产</h3>
+  <p>用户在百炼生成图片/视频后，产物存放在 OSS 临时目录，过期即清理、只提供临时下载链接。但用户有两类长期诉求：
+  <b>持久保存</b>（生成结果留存为个人数字资产）与<b>素材复用</b>（已生成内容作为再创作输入，免重复上传）。
+  资产中心统一管理生成及上传的图片/视频/音频资产，完成安全检测等处理后持久化落库，链路要求消息可靠消费。<span class="src">资产中心文章</span></p>
+  <figure class="reveal">
+    <img src="assets/asset-lifecycle.png" alt="百炼资产中心资产生命周期：模型生成→OSS 临时目录→消息驱动→资产中心→资产库，素材复用闭环" loading="lazy">
+    <figcaption>资产生命周期：消息体只携带资源元数据与 OSS 位置索引，不传文件本身（资产中心文章配图）</figcaption>
+  </figure>
+  <p>链路特征：消息量大、需可靠消费，且<b>消息流天然按用户组织</b>——每个用户的资产相互独立，要单独安全审核、单独控节奏，
+  重度用户批量生成时不能拖累他人入库。由此推出三项治理诉求：<b>用户级隔离、用户级限流、用户级挂起</b>。</p>
+
+  <h3>5.2 传统 Topic 的错位：隔离单元是队列，不是用户</h3>
+  <figure class="reveal">
+    <img src="assets/asset-problem.png" alt="传统 Topic 共享队列：重度用户 B 的消息占满消费线程，其他用户排队等待" loading="lazy">
+    <figcaption>传统 Topic 三不能：单用户风暴占满线程、只能全局限流、挂起粒度是整个消费组（资产中心文章配图）</figcaption>
+  </figure>
+  <p>问题的本质一句话：<b>业务的并发单元是"用户"，而传统 Topic 的隔离单元是"队列"，两者错位</b>，所有治理都得靠业务代码补齐——
+  在 Topic 之上自建用户路由层和用户级限流，等于在 MQ 之上再造一套 MQ。<span class="src">资产中心文章</span></p>
+
+  <h3>5.3 LiteTopic 用法：三侧各一行，业务零自建</h3>
+  <figure class="reveal">
+    <img src="assets/asset-arch.png" alt="资产中心 × LiteTopic 消息链路架构：用户 B 触发限流被挂起，其余用户正常消费" loading="lazy">
+    <figcaption>落地架构：用户 B 触发限流→挂起消费，队列间逻辑隔离，到期自动恢复（资产中心文章配图）</figcaption>
+  </figure>
+  <table>
+    <tr><th>侧</th><th>用法</th><th>效果</th></tr>
+    <tr><td>发送侧</td><td>按用户写入对应 LiteTopic，不存在由 Broker 自动创建</td><td>无需预建和维护清单</td></tr>
+    <tr><td>消费侧</td><td>一次通配符订阅覆盖全部用户</td><td>新用户接入零改动</td></tr>
+    <tr><td>限流侧</td><td>消费回调返回挂起指令，Broker 只停该 LiteTopic 投递</td><td>定向降压，他人不受影响</td></tr>
+  </table>
+  <figure class="reveal">
+    <img src="assets/asset-table.png" alt="三诉求对照表：用户级隔离/限流/挂起在 LiteTopic 与传统 Topic 下的差异" loading="lazy">
+    <figcaption>三项诉求逐一对应：隔离、限流、挂起全部按用户单独生效（资产中心文章配图）</figcaption>
+  </figure>
+  <p>落地价值三点：<b>架构简化</b>（隔离/限流/挂起由消息系统原生提供，零开发成本获得多租户治理）；
+  <b>稳定性</b>（用户间故障域隔离，单用户风暴通过"限流 + 定向挂起"自动降压，不影响整体 SLA）；
+  <b>增长零改造</b>（无需预建队列、无需调整订阅，链路随业务自然扩展）。</p>
+  <div class="note"><b>同一个原语，两种用法</b>：网关把 LiteTopic 当<b>分布式漏桶</b>（管放行节奏）；资产中心把它当<b>用户级消息治理</b>（管隔离与挂起）。
+  验证的是同一件事：当业务的并发单元是"用户"时，消息系统的治理单元也应该是"用户"。</div>
+  <div class="tip"><b>本节要点</b>：判断你的业务是否适用——"海量用户 × 轻量消息 × 按用户独立治理"形态，就把用户路由和限流层从业务代码里拿掉，交给 LiteTopic。</div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="ch" id="ch6">
+  <span class="kicker">CHAPTER 06 · 拓展一</span>
+  <h2>异步会话网关：让 Agent 不再等待</h2>
+  <p class="lead">LiteTopic 的第三种用法：会话级通道。对应周礼分享中的会话网关案例与《Agent 异步会话网关架构书》。</p>
+
+  <h3>6.1 需求：长任务时代的网关矛盾</h3>
+  <p>Agent 任务分钟级甚至更久，同步等待会耗尽网关连接与线程资源；客户端会断线、网关会宕机、Gateway 与 Worker 需要独立扩缩。
+  架构书把目标写成九条：连接长期保持、任务异步执行、网关不等待、Worker 不感知客户端所在节点、结果准确回流、流式结果、断线重连、网关故障恢复、两侧独立水平扩展。<span class="src">架构书</span></p>
+  <p>核心解耦是三个"生命周期分离"：<b>请求生命周期 ≠ Task 生命周期</b>；<b>Connection（短生命周期）≠ Session（长期业务身份）</b>；
+  <b>Gateway 节点是 Session 的临时承载者，而非永久所有者</b>（Session 可迁移）。</p>
+
+  <h3>6.2 旧方案七步：广播找人的代价</h3>
+  <p>讲稿中的真实用户旧方案：浏览器连到网关 1 → 任务写入 Redis → 下游轮询 Redis 取任务调大模型 → 结果写入 MQ 的共享 Topic →
+  网关集群同 Group 订阅，结果可能被<b>网关 2</b> 消费 → 网关 2 推不了连在网关 1 的用户，只能把结果写缓存/数据库，再发<b>广播消息</b>通知全集群 →
+  网关 1 发现是自己的用户，去缓存取结果 → 推给用户。共七步。<span class="src">周礼分享讲稿</span></p>
+  <svg class="diagram" viewBox="0 0 940 250" role="img" aria-label="旧方案七步：结果落到错误网关后靠广播与缓存找回">
+    <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#5b6472"/></marker></defs>
+    <text x="20" y="26" font-size="15" font-weight="700" fill="#0e1a2b">旧方案：会话粘性丢失 → 广播 + 缓存补救（7 步）</text>
+    <g font-size="12" fill="#33405a">
+      <rect x="20" y="60" width="90" height="40" rx="8" fill="#dbeafe" stroke="#2563eb"/><text x="65" y="85" text-anchor="middle">浏览器</text>
+      <rect x="150" y="60" width="90" height="40" rx="8" fill="#fff" stroke="#0e1a2b"/><text x="195" y="85" text-anchor="middle">网关 1</text>
+      <rect x="280" y="60" width="90" height="40" rx="8" fill="#fef3c7" stroke="#d97706"/><text x="325" y="85" text-anchor="middle">Redis 任务</text>
+      <rect x="410" y="60" width="100" height="40" rx="8" fill="#fff" stroke="#0e1a2b"/><text x="460" y="85" text-anchor="middle">Worker 调模型</text>
+      <rect x="550" y="60" width="100" height="40" rx="8" fill="#fff1e6" stroke="#ff6a00"/><text x="600" y="85" text-anchor="middle">MQ 共享 Topic</text>
+      <rect x="690" y="60" width="90" height="40" rx="8" fill="#fee2e2" stroke="#dc2626"/><text x="735" y="85" text-anchor="middle">网关 2 收到</text>
+      <rect x="690" y="140" width="90" height="40" rx="8" fill="#fef3c7" stroke="#d97706"/><text x="735" y="165" text-anchor="middle">缓存/DB</text>
+      <rect x="410" y="140" width="180" height="40" rx="8" fill="#fee2e2" stroke="#dc2626"/><text x="500" y="165" text-anchor="middle">广播：谁的用户谁来取</text>
+    </g>
+    <path d="M110,80 L150,80" stroke="#5b6472" marker-end="url(#ar3)"/><text x="128" y="72" font-size="11" fill="#5b6472">1</text>
+    <path d="M240,80 L280,80" stroke="#5b6472" marker-end="url(#ar3)"/><text x="258" y="72" font-size="11" fill="#5b6472">2</text>
+    <path d="M370,80 L410,80" stroke="#5b6472" marker-end="url(#ar3)"/><text x="388" y="72" font-size="11" fill="#5b6472">3 轮询</text>
+    <path d="M510,80 L550,80" stroke="#5b6472" marker-end="url(#ar3)"/><text x="528" y="72" font-size="11" fill="#5b6472">4</text>
+    <path d="M650,80 L690,80" stroke="#5b6472" marker-end="url(#ar3)"/><text x="668" y="72" font-size="11" fill="#5b6472">5</text>
+    <path d="M735,100 L735,140" stroke="#dc2626" marker-end="url(#ar3)"/><text x="745" y="124" font-size="11" fill="#dc2626">6 写缓存</text>
+    <path d="M690,160 L590,160" stroke="#dc2626" marker-end="url(#ar3)"/>
+    <path d="M410,160 L195,160 L195,100" stroke="#dc2626" fill="none" marker-end="url(#ar3)"/><text x="280" y="152" font-size="11" fill="#dc2626">7 广播后取回推送</text>
+    <text x="20" y="222" font-size="12" fill="#5b6472">问题：结果回流时做不到会话粘性——1 的结果落在 2 上，中间多了缓存、广播、取回等冗余过程</text>
+  </svg>
+  <p>PPT 把旧方案的问题清单列全：<b>流程复杂、依赖组件多、广播无效消费、排查路径长、不支持断连恢复</b>。
+  注意最后一条——旧架构里客户端断线后没有续传机制，而新架构天然支持（见 6.3）。<span class="src">PPT s13</span></p>
+
+  <h3>6.3 新方案三步：以 sessionId 命名的 LiteTopic</h3>
+  <p>新方案：浏览器进网关 1 发起异步任务；网关 1 知道本机有哪些 session，<b>以 sessionId 为名订阅对应 LiteTopic</b>；
+  Worker 处理完把结果写回该 session 的 LiteTopic。无论中间经过怎样的异步过程，结果天然回到持有该 session 的网关 1——
+  <b>会话粘性由队列命名保证</b>，不再依赖 Redis/数据库保存中间过程，也去掉广播通知。整个流程简化为三步。<span class="src">周礼分享讲稿</span></p>
+  <p>PPT 进一步给出三个精确化细节：① <b>任务与结果走两条通道</b>——任务提交到任务 Topic，Worker 消费任务 Topic 后把结果写回"对应 Session 名字的 LiteTopic"；
+  ② 网关在 Session 建立时"搜索 Session 匹配的 Topic（或新建）并订阅"，因此<b>无需广播、无需路由表、全连接无状态</b>，且允许多个网关共同订阅同一 Session Topic；
+  ③ 断连恢复支持按 <b>Last-Event-ID / Last-M 精准续传</b>：浏览器重连到网关 2 后，新网关重新订阅同一 LiteTopic(Session1)，从断点处恢复消息数据，继续从上层服务的位置恢复。<span class="src">PPT s14 / s15</span></p>
+  <svg class="diagram" viewBox="0 0 940 210" role="img" aria-label="新方案三步：session 命名 LiteTopic 保证结果回流">
+    <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#0d9488"/></marker></defs>
+    <text x="20" y="26" font-size="15" font-weight="700" fill="#0e1a2b">新方案：session 级通道 = 会话粘性（3 步）</text>
+    <g font-size="12" fill="#33405a">
+      <rect x="20" y="70" width="90" height="40" rx="8" fill="#dbeafe" stroke="#2563eb"/><text x="65" y="95" text-anchor="middle">浏览器</text>
+      <rect x="160" y="70" width="110" height="40" rx="8" fill="#fff" stroke="#0e1a2b"/><text x="215" y="95" text-anchor="middle">网关 1（订阅 S1）</text>
+      <rect x="330" y="70" width="110" height="40" rx="8" fill="#fff" stroke="#0e1a2b"/><text x="385" y="95" text-anchor="middle">Worker 执行</text>
+      <rect x="500" y="60" width="180" height="60" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/><text x="590" y="85" text-anchor="middle" font-weight="700" fill="#0d9488">LiteTopic = S1</text><text x="590" y="105" text-anchor="middle" font-size="11" fill="#33405a">结果事件持久化于此</text>
+    </g>
+    <path d="M110,90 L160,90" stroke="#0d9488" marker-end="url(#ar4)"/><text x="128" y="82" font-size="11" fill="#0d9488">1 任务</text>
+    <path d="M270,90 L330,90" stroke="#0d9488" marker-end="url(#ar4)"/><text x="298" y="82" font-size="11" fill="#0d9488">2 异步提交</text>
+    <path d="M440,90 L500,90" stroke="#0d9488" marker-end="url(#ar4)"/><text x="468" y="82" font-size="11" fill="#0d9488">3 写结果</text>
+    <path d="M590,120 C590,160 215,160 215,110" stroke="#0d9488" fill="none" marker-end="url(#ar4)"/>
+    <text x="380" y="152" font-size="11" fill="#0d9488">事件驱动推送：只有订阅 S1 的网关 1 收到 → 直接推浏览器</text>
+    <text x="20" y="196" font-size="12" fill="#5b6472">宕机恢复：数据全在 RocketMQ；网关重启后记住未完成 session、重新订阅，即可收走故障期间积压的消息（断点续传），不重复执行任务</text>
+  </svg>
+  <figure class="ppt reveal">
+    <img src="assets/ppt/s15.jpg" alt="原 slide s15：会话断连恢复时序" loading="lazy">
+    <figcaption><span class="ftag">PPT s15</span><span class="ftxt">断连恢复时序增量：网关机器 1 故障后浏览器重连网关机器 2，动态 sub(s1) 同一 Session Topic1，从断点续传 m3——m1/m2/m3 的消息位置正文未画，此图补全。</span><span class="zhint">点击放大</span></figcaption>
+  </figure>
+
+  <h3>6.4 架构书视角：四个对象与六条高可用原则</h3>
+  <p>架构书把整个网关抽象为四个核心对象：<b>Connection</b> 管客户端网络连接（WebSocket/SSE，节点本地资源）；
+  <b>Session</b> 管长期业务身份（可跨网关迁移）；<b>Task</b> 管一次 Agent 执行；<b>Event</b> 管执行过程与结果
+  （START / PROGRESS / TOKEN / TOOL_CALL / TOOL_RESULT / FINAL / ERROR）。数据链路：Connection → Session → Task → Agent 执行 → Event → Session → Connection。<span class="src">架构书</span></p>
+  <p>六条高可用原则：网关故障不丢 Task；网关重启不重跑已提交 Task；客户端断线不终止后台任务；Worker 与 Gateway 无固定绑定；
+  Session 可跨网关节点恢复；结果始终能通过 Session 找回正确客户端。可观测性统一以 sessionId / taskId / eventId 追踪全链路。</p>
+  <table>
+    <tr><th>架构书概念</th><th>LiteTopic 提供的对应能力</th></tr>
+    <tr><td>Session 级独立通道 / 会话粘性</td><td>以 sessionId 命名 LiteTopic，结果天然回流到订阅者</td></tr>
+    <tr><td>Gateway 只接收自己的 Session</td><td>差异化订阅：每台网关只订本机持有的 session 子集</td></tr>
+    <tr><td>故障恢复不丢事件、不重跑任务</td><td>消息持久化 + 重订阅后从偏移续读（断点续传）</td></tr>
+    <tr><td>Gateway / Worker 独立扩缩</td><td>百万级轻量队列 + 通配/按需订阅，两侧无节点绑定</td></tr>
+  </table>
+  <div class="tip"><b>本节要点</b>：异步会话网关的本质是"以 Session 为中心解耦连接与执行"；LiteTopic 把"会话粘性"从广播+缓存的补救机制变成队列命名的天然属性。</div>
+</section>
+
+<!-- ================= 7 ================= -->
+<section class="ch" id="ch7">
+  <span class="kicker">CHAPTER 07 · 拓展二</span>
+  <h2>系统间异步协作：OpenClaw Channel 与协议设计</h2>
+  <p class="lead">LiteTopic 的第四种用法：把消息作为两个 AI 系统之间的桥梁，从"人助理"升级为"企业级消息处理节点"。</p>
+
+  <h3>7.1 从 人→IM→Agent 到 系统→MQ→Agent</h3>
+  <p>传统 OpenClaw 玩法是人通过 IM（Telegram、微信、钉钉等）与个人助理交互。团队的尝试是让两个系统之间、或个人系统与 OpenClaw 之间、
+  或两个 OpenClaw 之间通过 RocketMQ 做异步任务交互——交互方式是异步的、协议化的，而非自然语言。<span class="src">周礼分享讲稿</span></p>
+  <p>机器间交互需要明确协议。PPT 给出了完整的消息信封（Message Envelope）与消息类型定义：<span class="src">PPT s21</span></p>
+  <table>
+    <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+    <tr><td>message_id</td><td>string</td><td>全局唯一消息标识</td></tr>
+    <tr><td>session_id</td><td>string</td><td>会话 ID → 映射 LiteTopic</td></tr>
+    <tr><td>source_agent / target_agent</td><td>string</td><td>发送方 / 目标 Agent 标识（目标可为通配）</td></tr>
+    <tr><td>msg_type</td><td>enum</td><td>消息类型（见下表）</td></tr>
+    <tr><td>timestamp</td><td>int64</td><td>发送时间戳（ms）</td></tr>
+    <tr><td>payload</td><td>bytes</td><td>业务载荷（JSON/Protobuf）</td></tr>
+    <tr><td>trace_id</td><td>string</td><td>分布式追踪链路 ID</td></tr>
+    <tr><td>priority</td><td>int32</td><td>消息优先级（0–9）</td></tr>
+    <tr><td>ttl</td><td>int64</td><td>消息生存时间（ms）</td></tr>
+  </table>
+  <table>
+    <tr><th>消息类型</th><th>方向</th><th>用途</th></tr>
+    <tr><td>TASK_REQUEST / TASK_RESPONSE</td><td>A→B / B→A</td><td>任务下发 / 执行结果返回</td></tr>
+    <tr><td>STREAM_CHUNK / STREAM_END</td><td>B→A</td><td>流式推理分片输出 / 结束标记</td></tr>
+    <tr><td>HEARTBEAT / STATE_SYNC</td><td>A↔B</td><td>Agent 存活探测 / 会话状态同步</td></tr>
+    <tr><td>ERROR</td><td>Any</td><td>异常 / 超时通知</td></tr>
+    <tr><td>CANCEL</td><td>A→B</td><td>取消进行中的任务</td></tr>
+  </table>
+  <p>实现流程为：</p>
+  <ol>
+    <li>上游外部系统发一条消息到 RocketMQ 的 Inbound Topic（其下按身份挂 LiteTopic）；</li>
+    <li>OpenClaw 的 RocketMQ Channel 以"自己的身份"（一个 LiteTopic 名字）订阅对应队列——纯事件驱动；</li>
+    <li>Connection Layer 做去重（Dedup Module），进入 Message Handler，按消息内容组装 OpenClaw 的 session key（Session Routing），交给 session 路由处理；</li>
+    <li>OpenClaw 处理完通过 Reply Dispatcher 调 Channel 的 Messaging Service；</li>
+    <li>Messaging Service 把结果发到回复通道（<code>replyTopic</code> + <code>replyTarget</code>，即下游的 LiteTopic）：下游是工作流则继续下发，是回写上游则完成多轮任务交互。</li>
+  </ol>
+  <p>PPT 给出五个应用场景卡片：<b>Ticket</b> 智能工单与流程自动化（Jira/ServiceNow 新工单 → Agent 分析内容、识别优先级、分派团队、生成初步方案并回写）；
+  <b>Monitor</b> 实时数据监控与智能告警（Prometheus/Grafana 告警事件 → 根因分析、关联历史、生成处置建议 → 值班群通知，从"告警通知"到"智能诊断"）；
+  <b>RAG</b> 知识库自动更新与增强（文档新增/更新 → 解析、分块、向量化 → 更新 RAG 索引）；
+  <b>ETL</b> 跨系统业务编排与数据 ETL（ERP/CRM/WMS 事件驱动清洗、转换、补全、校验，替代硬编码 ETL）；
+  <b>Multi-Agent</b> 协作调度中心（主控 Agent 拆解任务经不同 Topic 分发给代码/数据/文档等专业 Agent，完成后消息回传汇总）。<span class="src">PPT s23</span></p>
+  <p>关键工程立场：<b>没有改任何一行 OpenClaw 代码</b>，全部基于其开放的 channel 接入点在外侧实现——轻量地完成两个 Agent 之间的任务下发、结果回写、生命周期与上下文管理，类似 Google A2A 协议的实现流程。</p>
+
+  <h3>7.2 现场 Q&A：与 Matrix / NATS 的定位差异</h3>
+  <ul>
+    <li><b>vs HiClaw 的 Matrix</b>：Matrix 偏业务层（聊天室/room 概念、HTTP 模型），LiteTopic 更底层、只做通信基础设施；两者不竞争且可结合——HiClaw 目前用对象存储轮询事件（低效），未来可改为消息通知机制。</li>
+    <li><b>vs NATS</b>：讲者建议直接实测对比；LiteTopic 的设计目标是支撑十万到百万会话规模（集团双十一数亿 QPS 的分布式系统经验），几千到十万队列规模下内存开销与传统基本无区别。</li>
+    <li><b>vs MCP task 轮询</b>：MCP 自己承认轮询不是终态——面对运行数小时数天的任务轮询成本太高，演进方向是异步推送，与 LiteTopic 的事件驱动一致。</li>
+  </ul>
+  <div class="tip"><b>本节要点</b>：同一套"轻量队列 + 差异化订阅 + 事件驱动"原语，第四种用法是系统间协议化协作；定位是基础设施层，可与上层业务协议（Matrix/A2A）组合。</div>
+</section>
+
+<!-- ================= 8 ================= -->
+<section class="ch" id="ch8">
+  <span class="kicker">CHAPTER 08</span>
+  <h2>总结、自测与参考资料</h2>
+
+  <h3>8.1 一张表回顾四种用法</h3>
+  <table>
+    <tr><th>场景</th><th>隔离/命名单元</th><th>关键机制</th><th>收益</th></tr>
+    <tr><td>百炼网关限流</td><td>User + Model</td><td>漏桶矩阵 + Suspend 调速 + 通配订阅</td><td>限流比降 10×；成本乘法→加法</td></tr>
+    <tr><td>资产中心治理</td><td>User</td><td>一人一 Topic + 定向挂起</td><td>零自建路由/限流层；增长零改造</td></tr>
+    <tr><td>异步会话网关</td><td>Session</td><td>session 命名通道 + 差异化订阅 + 持久化续读</td><td>会话粘性天然成立；去广播去缓存；宕机可恢复</td></tr>
+    <tr><td>系统间协作</td><td>Agent 身份</td><td>协议化消息 + 事件驱动 channel</td><td>不改 Agent 代码实现 A2A 式协作</td></tr>
+  </table>
+
+  <h3>8.2 设计决策回顾（面试口径）</h3>
+  <ul>
+    <li><b>为什么固定窗口 + 漏桶？</b>固定窗口对短期波动宽容、适合配额硬上限；漏桶匀速放行契合 GPU 稳态友好尖峰敏感；令牌桶允许突发恰是 GPU 最怕的。</li>
+    <li><b>为什么漏桶外置到 MQ？</b>进程内队列会被超大客户突发压垮网关；外置把"接住"与"放行"物理拆开。</li>
+    <li><b>为什么是 LiteTopic 而不是传统 Topic？</b>三问：百万级队列？运行时按需创建？流控粒度到单队列？传统 Topic 全否，LiteTopic 全是。</li>
+    <li><b>为什么 Suspend 而不是 Sleep？</b>谁为等待买单：Sleep 占客户端线程会传染；Suspend 由 Broker 暂停拉取、线程立即释放，保证多租户公平。</li>
+    <li><b>为什么 Ready Set？</b>百万订阅下逐队列轮询开销线性增长；epoll 式就绪集合让开销只与活跃队列数成正比，代价是内存换时间。</li>
+  </ul>
+
+  <h3>8.3 自测十题（点击展开答案）</h3>
+  <details class="quiz"><summary>1. GPU 场景为什么选漏桶而不是令牌桶？</summary><div class="ans">漏桶匀速流出，把尖峰整形成稳态，契合 GPU"稳态友好、尖峰敏感"；令牌桶攒令牌允许一次突发，恰恰是 GPU 最怕的形态。判断标准：下游能否承受瞬时尖峰。</div></details>
+  <details class="quiz"><summary>2. 为什么用固定窗口而不是滑动窗口做基础限流？</summary><div class="ans">滑动窗口更严格、边界突发也被精确计算；固定窗口对短期波动宽容，在配额语义下减少误伤。硬上限交给固定窗口，节奏交给漏桶，分层组合。</div></details>
+  <details class="quiz"><summary>3. 漏桶为什么必须从进程内搬到进程外？</summary><div class="ans">超大客户突发若堆在网关内存，几十万请求会先把网关打挂；外置到持久化、隔离的 MQ 后，"接住请求"与"按节奏放行"物理分离，桶容量工程意义上近似无限。</div></details>
+  <details class="quiz"><summary>4. 传统 Topic/Group 做平台级漏桶的三个痛点？</summary><div class="ans">① 元数据重、预创建生效几十秒；② 订阅一致性迫使一客户一组机器，成本随客户数乘法膨胀；③ 共享 Topic 下单用户暴涨株连所有消费线程。</div></details>
+  <details class="quiz"><summary>5. Suspend 与 Sleep 的本质区别是什么？</summary><div class="ans">Sleep 是线程级阻塞，等待占住共享线程池的线程，限流会传染到正常租户；Suspend 是 Broker 级拉取流控，线程立即释放、到期由 Broker 重投，等待不占客户端资源。关键问句：谁为等待买单。</div></details>
+  <details class="quiz"><summary>6. Ready Set 解决什么问题？类比什么？代价是什么？</summary><div class="ans">解决百万订阅下逐队列轮询的线性开销；类比 epoll（相对 select/poll）：只遍历就绪集合，空集合长轮询。代价是内存换时间（每客户端维护就绪集合）。</div></details>
+  <details class="quiz"><summary>7. "同一个原语，两种用法"指什么？</summary><div class="ans">百炼网关把 LiteTopic 当分布式漏桶（管放行节奏）；资产中心把它当用户级消息治理（隔离/限流/挂起）。共同结论：业务并发单元是用户时，消息系统治理单元也应是用户。</div></details>
+  <details class="quiz"><summary>8. 会话网关旧方案为什么需要广播？新方案如何去掉？</summary><div class="ans">旧方案结果进共享 Topic，可能被不持有该用户连接的网关消费，只能写缓存+广播通知全集群来取回；新方案以 sessionId 命名 LiteTopic、网关只订阅本机 session，结果天然回流到正确网关，粘性由命名保证。</div></details>
+  <details class="quiz"><summary>9. 单个 LiteTopic 写入峰值不够怎么办？消费并发呢？</summary><div class="ans">写入：按名字零成本拆分（user-1/user-2/user-3）再合并治理；消费：单通道顺序消费 QPS 约 8k–1w，需要更高并发同样靠拆分队列。顺序与并发按业务粒度取舍。</div></details>
+  <details class="quiz"><summary>10. 网关宕机后如何既不重复执行任务又拿回结果？</summary><div class="ans">任务与结果都持久化在 RocketMQ；网关重启后读取未完成 session 清单、重新订阅对应 LiteTopic，从上次偏移续读故障期间积压的事件（断点续传）；Task 生命周期独立于网关，故不重跑。</div></details>
+
+  <h3>8.4 术语表</h3>
+  <table>
+    <tr><th>术语</th><th>解释</th></tr>
+    <tr><td>LiteTopic / Parent Topic</td><td>RocketMQ 5.x 轻量队列，挂在父 Topic 下；按需创建、TTL 回收、百万级规模</td></tr>
+    <tr><td>差异化订阅</td><td>同 Group 内不同实例订阅不同 LiteTopic 子集，不破坏一致性</td></tr>
+    <tr><td>Suspend N</td><td>消费回调返回的挂起指令：Broker 暂停该队列拉取 N 毫秒，线程立即释放</td></tr>
+    <tr><td>Ready Set</td><td>Broker 侧每客户端就绪集合，epoll 式事件驱动拉取</td></tr>
+    <tr><td>队头阻塞</td><td>FIFO 下队头慢消息阻塞其后所有消息</td></tr>
+    <tr><td>会话粘性</td><td>同一 session 的请求与结果落在同一通道/节点</td></tr>
+    <tr><td>漏桶 / 令牌桶</td><td>匀速流出整形 / 攒令牌允许突发</td></tr>
+    <tr><td>集群消费 / 订阅一致性</td><td>Group 内分摊队列；组内订阅集合必须相同（传统模型）</td></tr>
+    <tr><td>SPI / Pod</td><td>服务提供接口（插件扩展点）/ K8s 最小部署单元</td></tr>
+    <tr><td>MCP / A2A</td><td>模型-工具连接协议 / Agent 间协作协议</td></tr>
+    <tr><td>SSE / WebSocket</td><td>两种服务端推送长连接方式</td></tr>
+    <tr><td>TTL</td><td>存活时间：不活跃超时自动回收队列</td></tr>
+    <tr><td>NameServer / Broker</td><td>无状态路由注册中心 / 消息存储转发服务器（Master-Slave）</td></tr>
+    <tr><td>CommitLog / ConsumeQueue</td><td>混合顺序写的消息体文件 / 按队列的消费索引（20 字节条目）</td></tr>
+    <tr><td>Offset / rebalance</td><td>消费进度坐标 / Group 内实例分队列的周期重算（4.0）</td></tr>
+    <tr><td>重试 / 死信主题</td><td>%RETRY%+Group 退避重投；默认 16 次失败入 %DLQ%+Group</td></tr>
+  </table>
+
+  <h3>8.5 参考资料</h3>
+  <ul>
+    <li><a href="https://developer.aliyun.com/article/1747710" target="_blank" rel="noopener">百炼网关实践：用 RocketMQ LiteTopic 让限流比降了 10 倍</a>（不铭、文婷、稚柳，阿里云云原生公众号 / 开发者社区，2026-07-10）—— 第 1–4 章主要来源</li>
+    <li><a href="https://developer.aliyun.com/article/1761936" target="_blank" rel="noopener">百万用户，一人一 Topic：百炼资产中心用 RocketMQ LiteTopic 实现隔离与限流</a>（张世杰·靖泉，2026-09-09）—— 第 5 章来源与配图</li>
+    <li>周礼《让 AI Agent 不再等待：基于 RocketMQ 的异步协作架构实战》，Agentic AICon 智能体应用与架构工程大会（2026-08-15，本地 <code>分布式网关/</code>）—— 讲稿全文通读 + 23 页视频 PPT 逐页看图核对；第 1、3、6、7 章来源与 Q&A 数据</li>
+    <li>《Agent 异步会话网关项目架构书》（本地 <code>分布式网关/总结.md</code>）—— 第 6 章对象模型与高可用原则</li>
+    <li>智能体构建与进化——Agent 开源开发者沙龙 · 报告 3《RocketMQ LiteTopic 实践案例》PPT —— 四特性、四适配、插件抽象</li>
+    <li><a href="https://www.alibabacloud.com/zh/solution/tech-solution/rocketmq-for-multi-agent-communication" target="_blank" rel="noopener">RocketMQ for AI 官方方案页</a> · 钉钉交流群 110085036316</li>
+  </ul>
+  <footer>本教学页由本地素材（两篇文章含公众号镜像与开发者社区版、Agentic AICon 分享讲稿、23 页视频 PPT、架构书、沙龙 PPT）整理扩展而成；数字与结论均标注来源。配图版权归原文作者。</footer>
+</section>
+</main>
+
+<script>
+/* ---------- scroll progress + spy + reveal ---------- */
+(function(){
+  var bar = document.getElementById('progress');
+  var links = [].slice.call(document.querySelectorAll('#nav a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function onScroll(){
+    var h = document.documentElement;
+    var p = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = (p*100).toFixed(2) + '%';
+    var idx = 0;
+    for (var i=0;i<secs.length;i++){ if (secs[i] && secs[i].getBoundingClientRect().top < 140) idx = i; }
+    links.forEach(function(a,i){ a.classList.toggle('on', i===idx); });
+  }
+  document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('vis'); io.unobserve(e.target);} }); }, {threshold:.08});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+})();
+
+/* ---------- multi-tenant leaky bucket simulator ---------- */
+(function(){
+  var cv = document.getElementById('sim'), ctx = cv.getContext('2d');
+  var DPR = Math.min(2, window.devicePixelRatio || 1);
+  var COLORS = ['#60a5fa','#f87171','#4ade80','#c084fc','#2dd4bf','#fbbf24','#f472b6','#a3e635','#38bdf8','#fb923c','#e879f9','#94a3b8'];
+  var S = null, running = true, last = 0, acc = 0, hist = [];
+  function cfg(){ return {
+    arr:+document.getElementById('cArr').value, drain:+document.getElementById('cDrain').value,
+    cap:+document.getElementById('cCap').value, ten:+document.getElementById('cTen').value,
+    thr:+document.getElementById('cThr').value, sus:+document.getElementById('cSus').value,
+    mode:document.getElementById('cMode').value, speed:+document.getElementById('cSpeed').value }; }
+  function reset(){
+    var c = cfg();
+    S = { t:0, pass:0, rej:0, tenants:[], sleepers:[] };
+    for (var i=0;i<c.ten;i++) S.tenants.push({ q:0, susUntil:0, sleepUntil:0, burst:0, color:COLORS[i%COLORS.length] });
+    hist = [];
+  }
+  function syncTenants(){
+    var c = cfg();
+    while (S.tenants.length < c.ten) S.tenants.push({ q:0, susUntil:0, sleepUntil:0, burst:0, color:COLORS[S.tenants.length%COLORS.length] });
+    if (S.tenants.length > c.ten) S.tenants.length = c.ten;
+  }
+  function tick(dt){ /* dt in seconds of sim time */
+    var c = cfg(); syncTenants();
+    S.t += dt;
+    var now = S.t*1000;
+    var per = c.arr / S.tenants.length;
+    S.tenants.forEach(function(t,i){
+      var lambda = (per + (t.burst>0 ? per*14 : 0)) * dt;
+      if (t.burst>0) t.burst -= dt;
+      var add = Math.floor(lambda) + (Math.random() < lambda%1 ? 1 : 0);
+      if (c.mode === 'reject'){
+        var allow = Math.max(1, Math.round(c.drain*dt));
+        var p = Math.min(add, allow); S.pass += p; S.rej += add - p; t.q = 0;
+        return;
+      }
+      var space = c.cap - t.q;
+      if (add > space){ S.rej += add - space; t.q = c.cap; } else t.q += add;
+    });
+    /* expire sleepers */
+    S.sleepers = S.sleepers.filter(function(s){ return s.until > now; });
+    var busy = S.sleepers.length;
+    var free = Math.max(0, c.thr - busy);
+    /* consumption: each non-suspended tenant with queue uses one thread */
+    if (c.mode !== 'reject') for (var i=0;i<S.tenants.length;i++){
+      var t = S.tenants[i];
+      if (t.q <= 0) continue;
+      if (c.mode !== 'reject' && t.susUntil > now) continue;
+      if (c.mode === 'sleep' && t.sleepUntil > now) continue;
+      if (free <= 0) break;
+      /* limiter policy: queue above 40% capacity means burst -> limit */
+      var limited = t.q > c.cap*0.4;
+      if (limited && c.mode === 'suspend'){ t.susUntil = now + c.sus; continue; }
+      if (limited && c.mode === 'sleep'){ t.sleepUntil = now + c.sus; S.sleepers.push({ until: now + c.sus, tenant:i }); free--; busy++; continue; }
+      free--;
+      var out = Math.min(t.q, Math.max(1, Math.round(c.drain*dt)));
+      t.q -= out; S.pass += out;
+    }
+    hist.push(S.tenants.reduce(function(a,t){return a+t.q;},0));
+    if (hist.length > 240) hist.shift();
+  }
+  function draw(){
+    var c = cfg();
+    var W = cv.clientWidth, H = 330;
+    if (cv.width !== W*DPR){ cv.width = W*DPR; cv.height = H*DPR; }
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    var now = S.t*1000;
+    var n = S.tenants.length, gap = 10, left = 14, right = 14;
+    var bw = (W-left-right-gap*(n-1))/n;
+    var top = 34, bh = 190;
+    ctx.font = '11px sans-serif';
+    S.tenants.forEach(function(t,i){
+      var x = left + i*(bw+gap);
+      var suspended = c.mode!=='reject' && t.susUntil > now;
+      var sleeping = S.sleepers.some(function(s){return s.tenant===i;});
+      ctx.fillStyle = '#12233a'; ctx.strokeStyle = suspended ? '#fbbf24' : (sleeping ? '#f87171' : '#24405f');
+      ctx.lineWidth = suspended||sleeping ? 2 : 1;
+      roundRect(x, top, bw, bh, 6); ctx.fill(); ctx.stroke();
+      var fh = bh * Math.min(1, t.q/c.cap);
+      ctx.fillStyle = t.color; ctx.globalAlpha = .85;
+      if (fh>0){ roundRect(x+3, top+bh-fh+ (fh>6?0:0), bw-6, Math.max(2,fh-3), 4); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#8fa3bf'; ctx.textAlign='center';
+      ctx.fillText('租户'+(i+1), x+bw/2, top+bh+16);
+      ctx.fillStyle = '#dbe6f5';
+      ctx.fillText(Math.round(t.q), x+bw/2, top+bh+30);
+      if (suspended){ ctx.fillStyle='#fbbf24'; ctx.fillText('挂起', x+bw/2, top-8); }
+      else if (sleeping){ ctx.fillStyle='#f87171'; ctx.fillText('Sleep占线程', x+bw/2, top-8); }
+    });
+    /* thread pool strip */
+    var ty = top+bh+44;
+    ctx.textAlign='left'; ctx.fillStyle='#8fa3bf'; ctx.fillText('共享线程池', left, ty+12);
+    var tx = left+76, tw = (W-left-right-76)/c.thr;
+    var busy = S.sleepers.length;
+    var active = Math.min(c.thr-busy, S.tenants.filter(function(t){return t.q>0 && !(c.mode!=='reject'&&t.susUntil>now) && !(c.mode==='sleep'&&t.sleepUntil>now);}).length);
+    for (var i=0;i<c.thr;i++){
+      ctx.fillStyle = i<busy ? '#f87171' : (i<busy+active ? '#4ade80' : '#1d3049');
+      roundRect(tx+i*tw+1, ty, tw-3, 16, 3); ctx.fill();
+    }
+    /* sparkline */
+    var sy = ty+30, sh = H-sy-8;
+    ctx.strokeStyle='#24405f'; ctx.beginPath(); ctx.moveTo(left, sy+sh); ctx.lineTo(W-right, sy+sh); ctx.stroke();
+    if (hist.length>1){
+      var max = Math.max(50, Math.max.apply(null,hist));
+      ctx.strokeStyle='#fbbf24'; ctx.lineWidth=1.5; ctx.beginPath();
+      hist.forEach(function(v,i){ var x=left+(W-left-right)*i/239, y=sy+sh-(v/max)*sh; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke(); ctx.lineWidth=1;
+      ctx.fillStyle='#8fa3bf'; ctx.fillText('总排队深度曲线', left, sy-2);
+    }
+    /* stats + hint */
+    document.getElementById('sPass').textContent = S.pass;
+    document.getElementById('sQueue').textContent = S.tenants.reduce(function(a,t){return a+Math.round(t.q);},0);
+    document.getElementById('sRej').textContent = S.rej;
+    document.getElementById('sThr').textContent = (busy+active)+'/'+c.thr;
+    var hint = document.getElementById('simhint');
+    var susN = S.tenants.filter(function(t){return c.mode!=='reject'&&t.susUntil>now;}).length;
+    if (c.mode==='sleep' && busy>=c.thr) hint.textContent = '⚠ Sleep 模式：线程池被被限流租户占满（'+busy+'/'+c.thr+'），正常租户拿不到线程开始堆积——限流正在传染。切到 Suspend 对比。';
+    else if (c.mode==='sleep' && busy>0) hint.textContent = 'Sleep 模式：'+busy+' 个线程正为被限流租户睡觉等待，可用线程减少；被限流越多，传染越严重。';
+    else if (c.mode==='suspend' && susN>0) hint.textContent = 'Suspend 模式：'+susN+' 个租户被 Broker 暂停拉取，线程立即释放；其余租户放行不受影响——隔离成立。';
+    else if (c.mode==='reject') hint.textContent = '直接拒绝模式（传统两态限流）：不排队、不缓冲，超出单桶放行能力的请求立刻被拒（429）。对比 Suspend 的"攒起来按节奏放行"。';
+    else hint.textContent = '运行中：调节左侧参数即时生效；点"注入突发"观察单租户风暴是否影响他人。';
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function loop(){
+    var ts = performance.now();
+    if (!last) last = ts;
+    var el = Math.min(1, (ts-last)/1000); last = ts;
+    if (running){ acc += el*cfg().speed; var step=0.1; var guard=0; while(acc>=step && guard<40){ tick(step); acc-=step; guard++; } }
+    draw();
+  }
+  /* controls */
+  function bind(id, vid, fmt){ var el=document.getElementById(id); el.addEventListener('input', function(){ document.getElementById(vid).textContent = fmt(el.value); }); }
+  bind('cArr','vArr',function(v){return v+' req/s';}); bind('cDrain','vDrain',function(v){return v+' req/s';});
+  bind('cCap','vCap',function(v){return v;}); bind('cTen','vTen',function(v){return v;});
+  bind('cThr','vThr',function(v){return v+' 线程';}); bind('cSus','vSus',function(v){return v+' ms';});
+  document.getElementById('bRun').addEventListener('click', function(){ running=!running; this.textContent = running?'暂停':'运行'; });
+  document.getElementById('bReset').addEventListener('click', function(){ reset(); });
+  document.getElementById('bBurst').addEventListener('click', function(){ if(S.tenants[1]) S.tenants[1].burst = 3; });
+  window.addEventListener('resize', draw);
+  reset(); setInterval(loop, 50);
+})();
+</script>
+
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="原图放大">
+  <button class="lb-x" aria-label="关闭">×</button>
+  <img alt="">
+  <div class="lb-cap"></div>
+</div>
+<script>
+/* ---------- slide figure lightbox ---------- */
+(function(){
+  var lb = document.getElementById('lightbox'), im = lb.querySelector('img'), cap = lb.querySelector('.lb-cap');
+  function open(fig){
+    var src = fig.querySelector('img');
+    im.src = src.src; im.alt = src.alt;
+    cap.textContent = fig.querySelector('.ftag').textContent + ' · ' + fig.querySelector('.ftxt').textContent;
+    lb.classList.add('on'); document.body.style.overflow = 'hidden';
+  }
+  function close(){ lb.classList.remove('on'); document.body.style.overflow = ''; im.removeAttribute('src'); }
+  document.querySelectorAll('figure.ppt').forEach(function(f){
+    f.querySelector('img').addEventListener('click', function(){ open(f); });
+  });
+  lb.addEventListener('click', function(e){ if (e.target !== im) close(); });
+  lb.querySelector('.lb-x').addEventListener('click', close);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && lb.classList.contains('on')) close(); });
+})();
+</script>
+</body>
+</html>
